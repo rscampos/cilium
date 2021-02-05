@@ -2268,7 +2268,7 @@ Secondary Interface %s :: IPv4: (%s, %s), IPv6: (%s, %s)`, helpers.DualStackSupp
 						testExternalIPs()
 					})
 
-					Context("With host policy", func() {
+					SkipContextIf(helpers.RunsOnGKE, "With host policy", func() {
 						var ccnpHostPolicy string
 
 						BeforeAll(func() {
@@ -2395,16 +2395,15 @@ Secondary Interface %s :: IPv4: (%s, %s), IPv6: (%s, %s)`, helpers.DualStackSupp
 						testExternalIPs()
 					})
 
-					Context("With host policy", func() {
+					SkipContextIf(helpers.RunsOnGKE, "With host policy", func() {
 						var ccnpHostPolicy string
 
 						BeforeAll(func() {
-							options := map[string]string{
+							DeployCiliumOptionsAndDNS(kubectl, ciliumFilename, map[string]string{
 								"tunnel":               "disabled",
 								"autoDirectNodeRoutes": "true",
 								"hostFirewall":         "true",
-							}
-							DeployCiliumOptionsAndDNS(kubectl, ciliumFilename, options)
+							})
 
 							ccnpHostPolicy = helpers.ManifestGet(kubectl.BasePath(), "ccnp-host-policy-nodeport-tests.yaml")
 							_, err := kubectl.CiliumPolicyAction(helpers.DefaultNamespace, ccnpHostPolicy,
