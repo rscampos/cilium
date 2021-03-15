@@ -86,6 +86,8 @@ MAX_BASE_OPTIONS = -DSKIP_DEBUG=1 -DENABLE_IPV4=1 -DENABLE_IPV6=1 \
 ifeq ("$(KERNEL)","49")
 # IPSec is incompatible with BPF NodePort so we only enable on 4.9.
 MAX_BASE_OPTIONS += -DENABLE_IPSEC=1
+else ifeq ("$(KERNEL)","netnext")
+MAX_BASE_OPTIONS += -DETH_HLEN=0
 else
 MAX_BASE_OPTIONS += -DHAVE_LPM_TRIE_MAP_TYPE=1 -DHAVE_LRU_HASH_MAP_TYPE=1
 ifeq ("$(KERNEL)","netnext")
