@@ -690,7 +690,7 @@ func SkipK8sVersions(k8sVersions string) bool {
 // DualStackSupported returns whether the current environment has DualStack IPv6
 // enabled or not for the cluster.
 func DualStackSupported() bool {
-	supportedVersions := versioncheck.MustCompile(">=1.18.0")
+	supportedVersions := versioncheck.MustCompile(">=1.20.0")
 	k8sVersion, err := versioncheck.Version(GetCurrentK8SEnv())
 	if err != nil {
 		// If we cannot conclude the k8s version we assume that dual stack is not
