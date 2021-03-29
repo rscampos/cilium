@@ -56,6 +56,10 @@ const (
 	hostEndpointObj          = hostEndpointPrefix + ".o"
 	hostEndpointObjDebug     = hostEndpointPrefix + ".dbg.o"
 	hostEndpointAsm          = hostEndpointPrefix + "." + string(outputAssembly)
+
+	xdpPrefix = "bpf_xdp"
+	xdpProg   = xdpPrefix + "." + string(outputSource)
+	xdpObj    = xdpPrefix + ".o"
 )
 
 var (
@@ -73,6 +77,8 @@ type progInfo struct {
 	Output string
 	// OutputType to be created by LLVM
 	OutputType OutputType
+	// ExtraCArgs is extra compile args for the program
+	ExtraCArgs []string
 }
 
 // directoryInfo includes relevant directories for compilation and linking
@@ -284,6 +290,7 @@ func compile(ctx context.Context, prog *progInfo, dir *directoryInfo) (err error
 
 	args = append(args, standardCFlags...)
 	args = append(args, progCFlags(prog, dir)...)
+	args = append(args, prog.ExtraCArgs...)
 
 	// Compilation is split between two exec calls. First clang generates
 	// LLVM bitcode and then later llc compiles it to byte-code.
