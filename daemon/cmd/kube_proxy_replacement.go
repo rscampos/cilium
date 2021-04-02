@@ -416,10 +416,14 @@ func handleNativeDevices(strict bool) {
 		// NodePort BPF would forward requests to a service endpoint on a remote
 		// node via the Wireguard tunnel device which makes requests to be
 		// encrypted.
-		prevDev := option.Config.DirectRoutingDevice
-		option.Config.DirectRoutingDevice = wireguardTypes.IfaceName
-		log.Infof("Switching direct routing device from %s to %s", prevDev,
-			option.Config.DirectRoutingDevice)
+		if supportL3Dev() {
+			prevDev := option.Config.DirectRoutingDevice
+			option.Config.DirectRoutingDevice = wireguardTypes.IfaceName
+			log.Infof("Switching direct routing device from %s to %s", prevDev,
+				option.Config.DirectRoutingDevice)
+		} else {
+			log.Warn("NodePort BPF forwarded traffic won't be encrypted by Wireguard (requires >= 5.8 kernel)")
+		}
 	}
 
 	detectNodePortDevs := len(option.Config.Devices) == 0 &&
@@ -496,7 +500,10 @@ func finishKubeProxyReplacementInit(isKubeProxyReplacementStrict bool) {
 		}
 	}
 
-	// After this point, BPF NodePort should not be disabled
+	// +-------------------------------------------------------+
+	// | After this point, BPF NodePort should not be disabled |
+	// +-------------------------------------------------------+
+
 	if !option.Config.EnableHostLegacyRouting {
 		msg := ""
 		switch {
@@ -809,4 +816,13 @@ func hasFullHostReachableServices() bool {
 	return option.Config.EnableHostReachableServices &&
 		option.Config.EnableHostServicesTCP &&
 		option.Config.EnableHostServicesUDP
+}
+
+func supportL3Dev() bool {
+	probesManager := probes.NewProbeManager()
+	if h := probesManager.GetHelpers("sched_cls"); h != nil {
+		_, found := h["skb_change_head"]
+		return found
+	}
+	return false
 }
