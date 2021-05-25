@@ -93,11 +93,17 @@ func __canSkip(currentRule *PerSelectorPolicy, wildcardRule *PerSelectorPolicy) 
 	return ok
 }
 
+type Spiffe struct {
+	PeerIDs []string `json:"peerIDs"`
+}
+
 // TLS context holds the secret values resolved from an 'api.TLSContext'
 type TLSContext struct {
 	TrustedCA        string `json:"trustedCA,omitempty"`
 	CertificateChain string `json:"certificateChain,omitempty"`
 	PrivateKey       string `json:"privateKey,omitempty"`
+	Spiffe           *Spiffe
+	DstPort          uint16
 }
 
 // Equal returns true if 'a' and 'b' have the same contents.
@@ -531,6 +537,16 @@ func (l4 *L4Filter) getCerts(policyCtx PolicyContext, tls *api.TLSContext, direc
 	if tls == nil {
 		return nil, nil
 	}
+
+	if tls.Spiffe != nil {
+		return &TLSContext{
+			Spiffe: &Spiffe{
+				PeerIDs: tls.Spiffe.PeerIDs,
+			},
+			DstPort: tls.DstPort,
+		}, nil
+	}
+
 	ca, public, private, err := policyCtx.GetTLSContext(tls)
 	if err != nil {
 		log.WithError(err).Warningf("policy: Error getting %s TLS Context.", direction)
@@ -553,6 +569,7 @@ func (l4 *L4Filter) getCerts(policyCtx PolicyContext, tls *api.TLSContext, direc
 		TrustedCA:        ca,
 		CertificateChain: public,
 		PrivateKey:       private,
+		DstPort:          tls.DstPort,
 	}, nil
 }
 
