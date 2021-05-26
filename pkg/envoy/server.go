@@ -5,6 +5,8 @@ package envoy
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"net"
 	"os"
@@ -16,6 +18,7 @@ import (
 	"github.com/cilium/cilium/pkg/bpf"
 	"github.com/cilium/cilium/pkg/completion"
 	"github.com/cilium/cilium/pkg/envoy/xds"
+	"github.com/cilium/cilium/pkg/identity"
 	"github.com/cilium/cilium/pkg/lock"
 	"github.com/cilium/cilium/pkg/logging/logfields"
 	"github.com/cilium/cilium/pkg/option"
@@ -23,6 +26,7 @@ import (
 	"github.com/cilium/cilium/pkg/policy/api"
 	"github.com/cilium/cilium/pkg/policy/api/kafka"
 	"github.com/cilium/cilium/pkg/proxy/logger"
+	"github.com/cilium/cilium/pkg/spiffe"
 	"github.com/cilium/cilium/pkg/u8proto"
 
 	cilium "github.com/cilium/proxy/go/cilium/api"
@@ -177,7 +181,12 @@ func StartXDSServer(stateDir string) *XDSServer {
 		AckObserver: &NetworkPolicyHostsCache,
 	}
 
-	stopServer := startXDSGRPCServer(socketListener, ldsConfig, npdsConfig, nphdsConfig, 5*time.Second)
+	svidsConfig := &xds.ResourceTypeConfiguration{
+		Source:      SVIDsCache,
+		AckObserver: &SVIDsCache,
+	}
+
+	stopServer := startXDSGRPCServer(socketListener, ldsConfig, npdsConfig, nphdsConfig, svidsConfig, 5*time.Second)
 
 	return &XDSServer{
 		socketPath:             xdsPath,
@@ -1602,4 +1611,95 @@ func (s *XDSServer) getLocalEndpoint(networkPolicyName string) logger.EndpointUp
 	defer s.mutex.RUnlock()
 
 	return s.networkPolicyEndpoints[networkPolicyName]
+}
+
+// TODO(Mauricio): We need a type for X509SVID
+func (s *XDSServer) UpdateSVIDs(id identity.NumericIdentity, svids []*spiffe.SpiffeSVID) {
+	if svids == nil || len(svids) == 0 {
+		SVIDsCache.Delete(SVIDsTypeURL, id.StringID())
+		return
+	}
+
+	proxySvids, err := convertSVIDs(svids)
+	if err != nil {
+		log.WithError(err).Debug("fail to convert SVIDs")
+		return
+	}
+
+	envoySvids := cilium.SVIDs{
+		Identity: uint64(id),
+		Svids:    proxySvids,
+	}
+
+	SVIDsCache.Upsert(SVIDsTypeURL, id.StringID(), &envoySvids)
+}
+
+// TODO(Mauricio): Stupid converstion function because definition comes from
+// different proto definitions.
+func convertSVIDs(svids []*spiffe.SpiffeSVID) ([]*cilium.X509SVID, error) {
+	newSvids := []*cilium.X509SVID{}
+
+	// TODO(Mauricio): reflection, deep copy?
+	for _, svid := range svids {
+		cert, err := convertCertificates(svid.CertChain)
+		if err != nil {
+			return nil, err
+		}
+
+		key, err := convertKey(svid.Key)
+		if err != nil {
+			return nil, err
+		}
+
+		newSvid := cilium.X509SVID{
+			SpiffeId: svid.SpiffeID,
+			Cert:     cert,
+			Key:      key,
+		}
+
+		newSvids = append(newSvids, &newSvid)
+	}
+
+	return newSvids, nil
+}
+
+// converts from DER to PEM
+func convertCertificates(dem []byte) ([]byte, error) {
+	certs, err := x509.ParseCertificates(dem)
+	if err != nil {
+		return nil, err
+	}
+
+	pemData := []byte{}
+	for _, cert := range certs {
+		b := &pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: cert.Raw,
+		}
+		pemData = append(pemData, pem.EncodeToMemory(b)...)
+	}
+
+	return pemData, nil
+}
+
+func convertKey(dem []byte) ([]byte, error) {
+	privateKey, err := x509.ParsePKCS8PrivateKey(dem)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse private key: %v", err)
+	}
+	//signer, ok := privateKey.(crypto.Signer)
+	//if !ok {
+	//	return nil, fmt.Errorf("private key is type %T, not crypto.Signer", privateKey)
+	//}
+
+	data, err := x509.MarshalPKCS8PrivateKey(privateKey)
+	if err != nil {
+		return nil, err
+	}
+	b := &pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: data,
+	}
+
+	return pem.EncodeToMemory(b), nil
 }

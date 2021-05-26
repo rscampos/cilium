@@ -28,6 +28,13 @@ import (
 	"google.golang.org/grpc"
 )
 
+type SpiffeSVID struct {
+	SpiffeID  string
+	CertChain []byte
+	Key       []byte
+	ExpiresAt int64
+}
+
 // InitWatcher connects to spire control plane
 // Cilium can subscribe to spire based on pod selectors and start receiving
 // SVID updates.

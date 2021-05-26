@@ -348,6 +348,8 @@ type Endpoint struct {
 	// Expiration time for spiffe-based labels. Map key is same used in above
 	// field
 	spiffeExpiration map[string]int64
+
+	svids []*spiffe.SpiffeSVID
 }
 
 type policyRepoGetter interface {
@@ -1285,12 +1287,29 @@ func (e *Endpoint) WatchSpiffeIDs() error {
 			e.unlock()
 
 			spiffeMutex.Lock()
-			for _, svid := range resp.X509Svids {
-				e.getLogger().Debugf("Spiffe: processing Spiffe ID %q", svid.X509Svid.Id)
-				spiffeLabel := labels.NewLabel(spiffe.SpiffeIDToString(svid.X509Svid.Id), "", labels.LabelSourceSpiffe)
+
+			spiffeSvids := make([]*spiffe.SpiffeSVID, len(resp.X509Svids))
+			for idx, svid := range resp.X509Svids {
+				var certChain []byte
+				for _, cert := range svid.X509Svid.CertChain {
+					certChain = append(certChain, cert...)
+				}
+
+				spiffeSvids[idx] = &spiffe.SpiffeSVID{
+					SpiffeID:  spiffe.SpiffeIDToString(svid.X509Svid.Id),
+					CertChain: certChain,
+					Key:       svid.X509SvidKey,
+					ExpiresAt: svid.X509Svid.ExpiresAt,
+				}
+
+				e.getLogger().Debugf("Spiffe: processing Spiffe ID %q", spiffeSvids[idx].SpiffeID)
+				spiffeLabel := labels.NewLabel(spiffeSvids[idx].SpiffeID, "", labels.LabelSourceSpiffe)
 				newSpiffeIds[spiffeLabel.Key] = spiffeLabel
-				e.spiffeExpiration[spiffeLabel.Key] = svid.X509Svid.ExpiresAt
+				e.spiffeExpiration[spiffeLabel.Key] = spiffeSvids[idx].ExpiresAt
 			}
+
+			// assign here to be sure they're considered when calling sendSVIDs()
+			e.svids = spiffeSvids
 
 			if !newSpiffeIds.Equals(e.spiffeIDs) {
 				// Labels changed, calculate new Cilium Identity
@@ -1302,12 +1321,20 @@ func (e *Endpoint) WatchSpiffeIDs() error {
 			} else {
 				// Labels are the same, it's just a cert rotation.
 				e.LogStatusOK(Other, fmt.Sprintf("Spiffe: handling X509-SVID rotation - %s", time.Now().String()))
+				e.sendSVIDs()
 			}
 
 			e.spiffeIDs = newSpiffeIds
 			spiffeMutex.Unlock()
 		}
 	}
+}
+
+// Push current SVIDs to Envoy
+func (e *Endpoint) sendSVIDs() {
+	// TODO: how to lock?
+	// - this is called from SetIdentity that already has a lock...
+	e.proxy.UpdateSVIDs(e.getIdentity(), e.svids)
 }
 
 // SetPod sets the pod related to this endpoint.
