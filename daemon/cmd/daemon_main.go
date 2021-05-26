@@ -443,7 +443,7 @@ func initializeFlags() {
 	flags.Int(option.ProxyPrometheusPort, 0, "Port to serve Envoy metrics on. Default 0 (disabled).")
 	option.BindEnv(option.ProxyPrometheusPort)
 
-	flags.Bool(option.DisableEnvoyVersionCheck, false, "Do not perform Envoy binary version check on startup")
+	flags.Bool(option.DisableEnvoyVersionCheck, true, "Do not perform Envoy binary version check on startup")
 	flags.MarkHidden(option.DisableEnvoyVersionCheck)
 	// Disable version check if Envoy build is disabled
 	option.BindEnvWithLegacyEnvFallback(option.DisableEnvoyVersionCheck, "CILIUM_DISABLE_ENVOY_BUILD")
