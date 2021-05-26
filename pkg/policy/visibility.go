@@ -210,3 +210,11 @@ func (v *VisibilityMetadata) GetIngress() bool {
 func (v *VisibilityMetadata) GetPort() uint16 {
 	return v.Port
 }
+
+func (v *VisibilityMetadata) HasOriginatingTLS() bool {
+	return false
+}
+
+func (v *VisibilityMetadata) HasTerminatingTLS() bool {
+	return false
+}
