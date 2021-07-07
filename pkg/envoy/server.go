@@ -186,7 +186,12 @@ func StartXDSServer(stateDir string) *XDSServer {
 		AckObserver: &SVIDsCache,
 	}
 
-	stopServer := startXDSGRPCServer(socketListener, ldsConfig, npdsConfig, nphdsConfig, svidsConfig, 5*time.Second)
+	bundlesConfig := &xds.ResourceTypeConfiguration{
+		Source:      BundlesCache,
+		AckObserver: &BundlesCache,
+	}
+
+	stopServer := startXDSGRPCServer(socketListener, ldsConfig, npdsConfig, nphdsConfig, svidsConfig, bundlesConfig, 5*time.Second)
 
 	return &XDSServer{
 		socketPath:             xdsPath,
@@ -1702,4 +1707,24 @@ func convertKey(dem []byte) ([]byte, error) {
 	}
 
 	return pem.EncodeToMemory(b), nil
+}
+
+func (s *XDSServer) UpdateBundle(trustDomainName string, bundle []byte) {
+	if bundle == nil || len(bundle) == 0 {
+		BundlesCache.Delete(BundlesTypeURL, trustDomainName)
+		return
+	}
+
+	cert, err := convertCertificates(bundle)
+	if err != nil {
+		log.WithError(err).Debug("fail to convert bundle")
+		return
+	}
+
+	envoyBundle := cilium.Bundles{
+		TrustDomainName: trustDomainName,
+		Bundle:          cert,
+	}
+
+	BundlesCache.Upsert(BundlesTypeURL, trustDomainName, &envoyBundle)
 }
