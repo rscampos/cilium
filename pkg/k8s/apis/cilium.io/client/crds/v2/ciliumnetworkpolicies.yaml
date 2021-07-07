@@ -355,6 +355,11 @@ spec:
                                   'tls.crt' is assumed, if it exists. If given, the
                                   item must exist.
                                 type: string
+                              dstPort:
+                                description: DstPort is the port that will be used
+                                  for the ongoing connection from the proxy instance.
+                                  If ommited the original dst port is preserved.
+                                type: integer
                               privateKey:
                                 description: PrivateKey is the file name or k8s secret
                                   item name for the private key matching the certificate
@@ -382,14 +387,26 @@ spec:
                                 required:
                                 - name
                                 type: object
+                              spiffe:
+                                description: Spiffe defines the spiffe parameters
+                                  to use for this connection. When specified, the
+                                  connection will be originated / terminated using
+                                  TLS certificates from spiffe.
+                                properties:
+                                  peerIDs:
+                                    description: PeerIDs is the list of allowed Spiffe
+                                      IDs. All peers presenting a certificate valid
+                                      for any of the peers listed here is allowed.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                               trustedCA:
                                 description: TrustedCA is the file name or k8s secret
                                   item name for the trusted CA. If omitted, 'ca.crt'
                                   is assumed, if it exists. If given, the item must
                                   exist.
                                 type: string
-                            required:
-                            - secret
                             type: object
                           ports:
                             description: Ports is a list of L4 port/protocol
@@ -685,6 +702,11 @@ spec:
                                   'tls.crt' is assumed, if it exists. If given, the
                                   item must exist.
                                 type: string
+                              dstPort:
+                                description: DstPort is the port that will be used
+                                  for the ongoing connection from the proxy instance.
+                                  If ommited the original dst port is preserved.
+                                type: integer
                               privateKey:
                                 description: PrivateKey is the file name or k8s secret
                                   item name for the private key matching the certificate
@@ -712,14 +734,26 @@ spec:
                                 required:
                                 - name
                                 type: object
+                              spiffe:
+                                description: Spiffe defines the spiffe parameters
+                                  to use for this connection. When specified, the
+                                  connection will be originated / terminated using
+                                  TLS certificates from spiffe.
+                                properties:
+                                  peerIDs:
+                                    description: PeerIDs is the list of allowed Spiffe
+                                      IDs. All peers presenting a certificate valid
+                                      for any of the peers listed here is allowed.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                               trustedCA:
                                 description: TrustedCA is the file name or k8s secret
                                   item name for the trusted CA. If omitted, 'ca.crt'
                                   is assumed, if it exists. If given, the item must
                                   exist.
                                 type: string
-                            required:
-                            - secret
                             type: object
                         type: object
                       type: array
@@ -1625,6 +1659,11 @@ spec:
                                   'tls.crt' is assumed, if it exists. If given, the
                                   item must exist.
                                 type: string
+                              dstPort:
+                                description: DstPort is the port that will be used
+                                  for the ongoing connection from the proxy instance.
+                                  If ommited the original dst port is preserved.
+                                type: integer
                               privateKey:
                                 description: PrivateKey is the file name or k8s secret
                                   item name for the private key matching the certificate
@@ -1652,14 +1691,26 @@ spec:
                                 required:
                                 - name
                                 type: object
+                              spiffe:
+                                description: Spiffe defines the spiffe parameters
+                                  to use for this connection. When specified, the
+                                  connection will be originated / terminated using
+                                  TLS certificates from spiffe.
+                                properties:
+                                  peerIDs:
+                                    description: PeerIDs is the list of allowed Spiffe
+                                      IDs. All peers presenting a certificate valid
+                                      for any of the peers listed here is allowed.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                               trustedCA:
                                 description: TrustedCA is the file name or k8s secret
                                   item name for the trusted CA. If omitted, 'ca.crt'
                                   is assumed, if it exists. If given, the item must
                                   exist.
                                 type: string
-                            required:
-                            - secret
                             type: object
                           ports:
                             description: Ports is a list of L4 port/protocol
@@ -1955,6 +2006,11 @@ spec:
                                   'tls.crt' is assumed, if it exists. If given, the
                                   item must exist.
                                 type: string
+                              dstPort:
+                                description: DstPort is the port that will be used
+                                  for the ongoing connection from the proxy instance.
+                                  If ommited the original dst port is preserved.
+                                type: integer
                               privateKey:
                                 description: PrivateKey is the file name or k8s secret
                                   item name for the private key matching the certificate
@@ -1982,14 +2038,26 @@ spec:
                                 required:
                                 - name
                                 type: object
+                              spiffe:
+                                description: Spiffe defines the spiffe parameters
+                                  to use for this connection. When specified, the
+                                  connection will be originated / terminated using
+                                  TLS certificates from spiffe.
+                                properties:
+                                  peerIDs:
+                                    description: PeerIDs is the list of allowed Spiffe
+                                      IDs. All peers presenting a certificate valid
+                                      for any of the peers listed here is allowed.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                               trustedCA:
                                 description: TrustedCA is the file name or k8s secret
                                   item name for the trusted CA. If omitted, 'ca.crt'
                                   is assumed, if it exists. If given, the item must
                                   exist.
                                 type: string
-                            required:
-                            - secret
                             type: object
                         type: object
                       type: array
@@ -2698,6 +2766,11 @@ spec:
                                     omitted, 'tls.crt' is assumed, if it exists. If
                                     given, the item must exist.
                                   type: string
+                                dstPort:
+                                  description: DstPort is the port that will be used
+                                    for the ongoing connection from the proxy instance.
+                                    If ommited the original dst port is preserved.
+                                  type: integer
                                 privateKey:
                                   description: PrivateKey is the file name or k8s
                                     secret item name for the private key matching
@@ -2726,14 +2799,27 @@ spec:
                                   required:
                                   - name
                                   type: object
+                                spiffe:
+                                  description: Spiffe defines the spiffe parameters
+                                    to use for this connection. When specified, the
+                                    connection will be originated / terminated using
+                                    TLS certificates from spiffe.
+                                  properties:
+                                    peerIDs:
+                                      description: PeerIDs is the list of allowed
+                                        Spiffe IDs. All peers presenting a certificate
+                                        valid for any of the peers listed here is
+                                        allowed.
+                                      items:
+                                        type: string
+                                      type: array
+                                  type: object
                                 trustedCA:
                                   description: TrustedCA is the file name or k8s secret
                                     item name for the trusted CA. If omitted, 'ca.crt'
                                     is assumed, if it exists. If given, the item must
                                     exist.
                                   type: string
-                              required:
-                              - secret
                               type: object
                             ports:
                               description: Ports is a list of L4 port/protocol
@@ -3034,6 +3120,11 @@ spec:
                                     omitted, 'tls.crt' is assumed, if it exists. If
                                     given, the item must exist.
                                   type: string
+                                dstPort:
+                                  description: DstPort is the port that will be used
+                                    for the ongoing connection from the proxy instance.
+                                    If ommited the original dst port is preserved.
+                                  type: integer
                                 privateKey:
                                   description: PrivateKey is the file name or k8s
                                     secret item name for the private key matching
@@ -3062,14 +3153,27 @@ spec:
                                   required:
                                   - name
                                   type: object
+                                spiffe:
+                                  description: Spiffe defines the spiffe parameters
+                                    to use for this connection. When specified, the
+                                    connection will be originated / terminated using
+                                    TLS certificates from spiffe.
+                                  properties:
+                                    peerIDs:
+                                      description: PeerIDs is the list of allowed
+                                        Spiffe IDs. All peers presenting a certificate
+                                        valid for any of the peers listed here is
+                                        allowed.
+                                      items:
+                                        type: string
+                                      type: array
+                                  type: object
                                 trustedCA:
                                   description: TrustedCA is the file name or k8s secret
                                     item name for the trusted CA. If omitted, 'ca.crt'
                                     is assumed, if it exists. If given, the item must
                                     exist.
                                   type: string
-                              required:
-                              - secret
                               type: object
                           type: object
                         type: array
@@ -3987,6 +4091,11 @@ spec:
                                     omitted, 'tls.crt' is assumed, if it exists. If
                                     given, the item must exist.
                                   type: string
+                                dstPort:
+                                  description: DstPort is the port that will be used
+                                    for the ongoing connection from the proxy instance.
+                                    If ommited the original dst port is preserved.
+                                  type: integer
                                 privateKey:
                                   description: PrivateKey is the file name or k8s
                                     secret item name for the private key matching
@@ -4015,14 +4124,27 @@ spec:
                                   required:
                                   - name
                                   type: object
+                                spiffe:
+                                  description: Spiffe defines the spiffe parameters
+                                    to use for this connection. When specified, the
+                                    connection will be originated / terminated using
+                                    TLS certificates from spiffe.
+                                  properties:
+                                    peerIDs:
+                                      description: PeerIDs is the list of allowed
+                                        Spiffe IDs. All peers presenting a certificate
+                                        valid for any of the peers listed here is
+                                        allowed.
+                                      items:
+                                        type: string
+                                      type: array
+                                  type: object
                                 trustedCA:
                                   description: TrustedCA is the file name or k8s secret
                                     item name for the trusted CA. If omitted, 'ca.crt'
                                     is assumed, if it exists. If given, the item must
                                     exist.
                                   type: string
-                              required:
-                              - secret
                               type: object
                             ports:
                               description: Ports is a list of L4 port/protocol
@@ -4323,6 +4445,11 @@ spec:
                                     omitted, 'tls.crt' is assumed, if it exists. If
                                     given, the item must exist.
                                   type: string
+                                dstPort:
+                                  description: DstPort is the port that will be used
+                                    for the ongoing connection from the proxy instance.
+                                    If ommited the original dst port is preserved.
+                                  type: integer
                                 privateKey:
                                   description: PrivateKey is the file name or k8s
                                     secret item name for the private key matching
@@ -4351,14 +4478,27 @@ spec:
                                   required:
                                   - name
                                   type: object
+                                spiffe:
+                                  description: Spiffe defines the spiffe parameters
+                                    to use for this connection. When specified, the
+                                    connection will be originated / terminated using
+                                    TLS certificates from spiffe.
+                                  properties:
+                                    peerIDs:
+                                      description: PeerIDs is the list of allowed
+                                        Spiffe IDs. All peers presenting a certificate
+                                        valid for any of the peers listed here is
+                                        allowed.
+                                      items:
+                                        type: string
+                                      type: array
+                                  type: object
                                 trustedCA:
                                   description: TrustedCA is the file name or k8s secret
                                     item name for the trusted CA. If omitted, 'ca.crt'
                                     is assumed, if it exists. If given, the item must
                                     exist.
                                   type: string
-                              required:
-                              - secret
                               type: object
                           type: object
                         type: array
