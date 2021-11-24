@@ -344,6 +344,10 @@ type Endpoint struct {
 
 	// Set of labels that correspond to SPIFFE IDs
 	spiffeIDs labels.Labels
+
+	// Expiration time for spiffe-based labels. Map key is same used in above
+	// field
+	spiffeExpiration map[string]int64
 }
 
 type policyRepoGetter interface {
@@ -453,25 +457,26 @@ func NewEndpointWithState(owner regeneration.Owner, policyGetter policyRepoGette
 
 func createEndpoint(owner regeneration.Owner, policyGetter policyRepoGetter, proxy EndpointProxy, allocator cache.IdentityAllocator, ID uint16, ifName string) *Endpoint {
 	ep := &Endpoint{
-		owner:           owner,
-		policyGetter:    policyGetter,
-		ID:              ID,
-		createdAt:       time.Now(),
-		proxy:           proxy,
-		ifName:          ifName,
-		OpLabels:        labels.NewOpLabels(),
-		DNSRules:        nil,
-		DNSHistory:      fqdn.NewDNSCacheWithLimit(option.Config.ToFQDNsMinTTL, option.Config.ToFQDNsMaxIPsPerHost),
-		DNSZombies:      fqdn.NewDNSZombieMappings(option.Config.ToFQDNsMaxDeferredConnectionDeletes),
-		state:           "",
-		status:          NewEndpointStatus(),
-		hasBPFProgram:   make(chan struct{}, 0),
-		desiredPolicy:   policy.NewEndpointPolicy(policyGetter.GetPolicyRepository()),
-		controllers:     controller.NewManager(),
-		regenFailedChan: make(chan struct{}, 1),
-		allocator:       allocator,
-		logLimiter:      logging.NewLimiter(10*time.Second, 3), // 1 log / 10 secs, burst of 3
-		noTrackPort:     0,
+		owner:            owner,
+		policyGetter:     policyGetter,
+		ID:               ID,
+		createdAt:        time.Now(),
+		proxy:            proxy,
+		ifName:           ifName,
+		OpLabels:         labels.NewOpLabels(),
+		DNSRules:         nil,
+		DNSHistory:       fqdn.NewDNSCacheWithLimit(option.Config.ToFQDNsMinTTL, option.Config.ToFQDNsMaxIPsPerHost),
+		DNSZombies:       fqdn.NewDNSZombieMappings(option.Config.ToFQDNsMaxDeferredConnectionDeletes),
+		state:            "",
+		status:           NewEndpointStatus(),
+		hasBPFProgram:    make(chan struct{}, 0),
+		desiredPolicy:    policy.NewEndpointPolicy(policyGetter.GetPolicyRepository()),
+		controllers:      controller.NewManager(),
+		regenFailedChan:  make(chan struct{}, 1),
+		allocator:        allocator,
+		logLimiter:       logging.NewLimiter(10*time.Second, 3), // 1 log / 10 secs, burst of 3
+		noTrackPort:      0,
+		spiffeExpiration: make(map[string]int64),
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -1191,6 +1196,61 @@ func (e *Endpoint) StartSpiffeIDsWatcher() error {
 }
 
 func (e *Endpoint) WatchSpiffeIDs() error {
+	// mutex to avoid interfere when there is an update of the spiffe
+	// labels and the function called to check if the labels are
+	// expired
+	// TODO(Mauricio): rework this to avoid having a new mutex and use
+	// e.mutex instead
+	spiffeMutex := lock.Mutex{}
+
+	controllerName := fmt.Sprintf("expire-spiffe-labels-%d", e.ID)
+	e.controllers.UpdateController(controllerName,
+		controller.ControllerParams{
+			DoFunc: func(ctx context.Context) error {
+
+				// Just check that the endpoint is still valid
+				if err := e.lockAlive(); err != nil {
+					return err
+				}
+
+				if e.getState() != StateReady {
+					e.unlock()
+					return nil
+				}
+
+				e.unlock()
+
+				spiffeMutex.Lock()
+				defer spiffeMutex.Unlock()
+
+				now := time.Now().Unix()
+				toDelete := labels.Labels{}
+
+				e.getLogger().Debugf("spiffe: checking if spiffe-labels are valid for %d", e.ID)
+
+				for key, value := range e.spiffeIDs {
+					expiresAt, ok := e.spiffeExpiration[key]
+					log.Debugf("spiffe: checking if label %s is expired (expires at %d)", key, expiresAt)
+					if !ok || now > expiresAt {
+						toDelete[key] = value
+						delete(e.spiffeIDs, key)
+						delete(e.spiffeExpiration, key)
+						e.LogStatusOK(Other, fmt.Sprintf("removing expired %s spiffe label", key))
+					}
+				}
+
+				if err := e.ModifyIdentityLabels(labels.Labels{}, toDelete); err != nil {
+					// TODO(Mauricio): retry, fail?
+					e.LogStatus(Other, Warning, fmt.Sprintf("Failed to update identity labels (2) %s", err.Error()))
+				}
+
+				return nil
+			},
+			Context:     e.aliveCtx,
+			RunInterval: 1 * time.Minute,
+		},
+	)
+
 	// reconnect control
 	firstTime := true
 
@@ -1219,16 +1279,22 @@ func (e *Endpoint) WatchSpiffeIDs() error {
 				break
 			}
 
+			if err := e.lockAlive(); err != nil {
+				return err
+			}
+			e.unlock()
+
+			spiffeMutex.Lock()
 			for _, svid := range resp.X509Svids {
 				e.getLogger().Debugf("Spiffe: processing Spiffe ID %q", svid.X509Svid.Id)
 				spiffeLabel := labels.NewLabel(spiffe.SpiffeIDToString(svid.X509Svid.Id), "", labels.LabelSourceSpiffe)
 				newSpiffeIds[spiffeLabel.Key] = spiffeLabel
+				e.spiffeExpiration[spiffeLabel.Key] = svid.X509Svid.ExpiresAt
 			}
 
 			if !newSpiffeIds.Equals(e.spiffeIDs) {
 				// Labels changed, calculate new Cilium Identity
-				err := e.ModifyIdentityLabels(newSpiffeIds, e.spiffeIDs)
-				if err != nil {
+				if err := e.ModifyIdentityLabels(newSpiffeIds, e.spiffeIDs); err != nil {
 					// TODO(Mauricio): retry, fail?
 					e.LogStatus(Other, Warning, fmt.Sprintf("Spiffe: Failed to update identity labels %s", err.Error()))
 					continue
@@ -1239,6 +1305,7 @@ func (e *Endpoint) WatchSpiffeIDs() error {
 			}
 
 			e.spiffeIDs = newSpiffeIds
+			spiffeMutex.Unlock()
 		}
 	}
 }
