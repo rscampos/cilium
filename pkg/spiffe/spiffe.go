@@ -18,8 +18,13 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"sync"
+	"time"
 
 	slim_corev1 "github.com/cilium/cilium/pkg/k8s/slim/k8s/api/core/v1"
+	"github.com/cilium/cilium/pkg/lock"
+	"github.com/cilium/cilium/pkg/logging"
+	"github.com/cilium/cilium/pkg/logging/logfields"
 	"github.com/cilium/cilium/pkg/option"
 
 	delegatedidentityv1 "github.com/spiffe/spire-api-sdk/proto/spire/api/agent/delegatedidentity/v1"
@@ -28,11 +33,48 @@ import (
 	"google.golang.org/grpc"
 )
 
+const (
+	spiffeSubsys = "spiffe"
+	timeDelay    = 10 * time.Second
+
+	// TODO(Mauricio): This should be configurable.
+	localTrustDomain = "spiffe://example.org"
+)
+
+var (
+	log = logging.DefaultLogger.WithField(logfields.LogSubsys, spiffeSubsys)
+)
+
 type SpiffeSVID struct {
 	SpiffeID  string
 	CertChain []byte
 	Key       []byte
 	ExpiresAt int64
+}
+
+type BundleUpdater interface {
+	UpdateBundle(trustDomainName string, bundle []byte)
+}
+
+type Watcher struct {
+	bundleUpdater BundleUpdater
+
+	mutex *lock.Mutex
+	cv    *sync.Cond
+}
+
+func NewWatcher(bundleUpdater BundleUpdater) *Watcher {
+	w := &Watcher{
+		bundleUpdater: bundleUpdater,
+		mutex:         &lock.Mutex{},
+	}
+
+	w.cv = sync.NewCond(w.mutex)
+	return w
+}
+
+func (s *Watcher) Start() {
+	go s.runBundlesWatcher()
 }
 
 // InitWatcher connects to spire control plane
@@ -104,4 +146,51 @@ func getPodSelectors(pod *slim_corev1.Pod) []*types.Selector {
 
 func SpiffeIDToString(id *types.SPIFFEID) string {
 	return id.TrustDomain + id.Path
+}
+
+func (s *Watcher) runBundlesWatcher() {
+	firstTime := true
+
+	for {
+		if !firstTime {
+			// TODO: use backoff?
+			time.Sleep(timeDelay)
+		} else {
+			firstTime = false
+		}
+
+		log.Debugf("spiffe(bundles): trying to connect")
+
+		unixPath := "unix://" + option.Config.SpirePrivilegedAPISocketPath
+		conn, err := grpc.Dial(unixPath, grpc.WithInsecure())
+		if err != nil {
+			log.WithError(err).Warning("spiffe: failed to connect to delegation SPIRE socket")
+			continue
+		}
+
+		client := delegatedidentityv1.NewDelegatedIdentityClient(conn)
+
+		ctx := context.Background()
+		stream, err := client.SubscribeToX509Bundles(ctx, &delegatedidentityv1.SubscribeToX509BundlesRequest{})
+		if err != nil {
+			log.WithError(err).Warning("spiffe(bundles): failed to create delegation SPIRE api client")
+			continue
+		}
+
+		for {
+			resp, err := stream.Recv()
+			if err != nil {
+				// TODO: specific error message if cilium agent registration entry is missing.
+				log.WithError(err).Warning("spiffe(bundles): failed to read delegation SPIRE api")
+				break
+			}
+			for trustDomainName, trustDomainBundle := range resp.CaCertificates {
+				if trustDomainName == localTrustDomain {
+					trustDomainName = "LOCAL"
+				}
+
+				s.bundleUpdater.UpdateBundle(trustDomainName, trustDomainBundle)
+			}
+		}
+	}
 }

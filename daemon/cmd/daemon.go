@@ -74,6 +74,7 @@ import (
 	"github.com/cilium/cilium/pkg/service"
 	serviceStore "github.com/cilium/cilium/pkg/service/store"
 	"github.com/cilium/cilium/pkg/sockops"
+	"github.com/cilium/cilium/pkg/spiffe"
 	"github.com/cilium/cilium/pkg/status"
 	"github.com/cilium/cilium/pkg/trigger"
 	cnitypes "github.com/cilium/cilium/plugins/cilium-cni/types"
@@ -174,6 +175,8 @@ type Daemon struct {
 
 	// event queue for serializing configuration updates to the daemon.
 	configModifyQueue *eventqueue.EventQueue
+
+	spiffeWatcher *spiffe.Watcher
 }
 
 // GetPolicyRepository returns the policy repository of the daemon
@@ -669,6 +672,11 @@ func NewDaemon(ctx context.Context, cancel context.CancelFunc, epMgr *endpointma
 		// daemon options.
 		d.k8sCachesSynced = d.k8sWatcher.InitK8sSubsystem(d.ctx)
 		bootstrapStats.k8sInit.End(true)
+	}
+
+	if option.Config.EnableSpiffe {
+		d.spiffeWatcher = spiffe.NewWatcher(d.l7Proxy.XDSServer)
+		d.spiffeWatcher.Start()
 	}
 
 	// BPF masquerade depends on BPF NodePort and require host-reachable svc to
