@@ -12,7 +12,11 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Describes the specified Scheduled Instances or all your Scheduled Instances.
+// Describes the specified Scheduled Instances or all your Scheduled Instances. We
+// are retiring EC2-Classic on August 15, 2022. We recommend that you migrate from
+// EC2-Classic to a VPC. For more information, see Migrate from EC2-Classic to a
+// VPC (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/vpc-migrate.html) in
+// the Amazon Elastic Compute Cloud User Guide.
 func (c *Client) DescribeScheduledInstances(ctx context.Context, params *DescribeScheduledInstancesInput, optFns ...func(*Options)) (*DescribeScheduledInstancesOutput, error) {
 	if params == nil {
 		params = &DescribeScheduledInstancesInput{}
@@ -196,12 +200,13 @@ func NewDescribeScheduledInstancesPaginator(client DescribeScheduledInstancesAPI
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeScheduledInstancesPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeScheduledInstances page.
@@ -228,7 +233,10 @@ func (p *DescribeScheduledInstancesPaginator) NextPage(ctx context.Context, optF
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 

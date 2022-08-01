@@ -18,7 +18,11 @@ import (
 // daily schedule is 4 hours, the minimum weekly schedule is 24 hours, and the
 // minimum monthly schedule is 100 hours. After you find a schedule that meets your
 // needs, call PurchaseScheduledInstances to purchase Scheduled Instances with that
-// schedule.
+// schedule. We are retiring EC2-Classic on August 15, 2022. We recommend that you
+// migrate from EC2-Classic to a VPC. For more information, see Migrate from
+// EC2-Classic to a VPC
+// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/vpc-migrate.html) in the
+// Amazon Elastic Compute Cloud User Guide.
 func (c *Client) DescribeScheduledInstanceAvailability(ctx context.Context, params *DescribeScheduledInstanceAvailabilityInput, optFns ...func(*Options)) (*DescribeScheduledInstanceAvailabilityOutput, error) {
 	if params == nil {
 		params = &DescribeScheduledInstanceAvailabilityInput{}
@@ -218,12 +222,13 @@ func NewDescribeScheduledInstanceAvailabilityPaginator(client DescribeScheduledI
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeScheduledInstanceAvailabilityPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeScheduledInstanceAvailability page.
@@ -250,7 +255,10 @@ func (p *DescribeScheduledInstanceAvailabilityPaginator) NextPage(ctx context.Co
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 
