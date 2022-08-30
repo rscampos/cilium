@@ -18,7 +18,11 @@ import (
 // specific modification is returned. For more information, see Modifying Reserved
 // Instances
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ri-modifying.html) in the
-// Amazon EC2 User Guide.
+// Amazon EC2 User Guide. We are retiring EC2-Classic on August 15, 2022. We
+// recommend that you migrate from EC2-Classic to a VPC. For more information, see
+// Migrate from EC2-Classic to a VPC
+// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/vpc-migrate.html) in the
+// Amazon Elastic Compute Cloud User Guide.
 func (c *Client) DescribeReservedInstancesModifications(ctx context.Context, params *DescribeReservedInstancesModificationsInput, optFns ...func(*Options)) (*DescribeReservedInstancesModificationsOutput, error) {
 	if params == nil {
 		params = &DescribeReservedInstancesModificationsInput{}
@@ -212,12 +216,13 @@ func NewDescribeReservedInstancesModificationsPaginator(client DescribeReservedI
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeReservedInstancesModificationsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeReservedInstancesModifications page.
@@ -238,7 +243,10 @@ func (p *DescribeReservedInstancesModificationsPaginator) NextPage(ctx context.C
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 
