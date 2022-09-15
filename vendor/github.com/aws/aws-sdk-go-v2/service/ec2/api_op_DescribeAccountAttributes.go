@@ -11,14 +11,14 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Describes attributes of your AWS account. The following are the supported
-// account attributes:
+// Describes attributes of your Amazon Web Services account. The following are the
+// supported account attributes:
 //
-// * supported-platforms: Indicates whether your account can
-// launch instances into EC2-Classic and EC2-VPC, or only into EC2-VPC.
+// * supported-platforms: Indicates whether your
+// account can launch instances into EC2-Classic and EC2-VPC, or only into
+// EC2-VPC.
 //
-// *
-// default-vpc: The ID of the default VPC for your account, or none.
+// * default-vpc: The ID of the default VPC for your account, or none.
 //
 // *
 // max-instances: This attribute is no longer supported. The returned value does
@@ -37,6 +37,12 @@ import (
 //
 // * vpc-max-elastic-ips: The maximum number of Elastic IP addresses
 // that you can allocate for use with EC2-VPC.
+//
+// We are retiring EC2-Classic on
+// August 15, 2022. We recommend that you migrate from EC2-Classic to a VPC. For
+// more information, see Migrate from EC2-Classic to a VPC
+// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/vpc-migrate.html) in the
+// Amazon EC2 User Guide.
 func (c *Client) DescribeAccountAttributes(ctx context.Context, params *DescribeAccountAttributesInput, optFns ...func(*Options)) (*DescribeAccountAttributesOutput, error) {
 	if params == nil {
 		params = &DescribeAccountAttributesInput{}
