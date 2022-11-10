@@ -47,32 +47,52 @@ type DescribeLaunchTemplateVersionsInput struct {
 	// * ebs-optimized - A boolean that indicates whether the instance is
 	// optimized for Amazon EBS I/O.
 	//
-	// * iam-instance-profile - The ARN of the IAM
-	// instance profile.
+	// * http-endpoint - Indicates whether the HTTP
+	// metadata endpoint on your instances is enabled (enabled | disabled).
+	//
+	// *
+	// http-protocol-ipv4 - Indicates whether the IPv4 endpoint for the instance
+	// metadata service is enabled (enabled | disabled).
+	//
+	// * host-resource-group-arn -
+	// The ARN of the host resource group in which to launch the instances.
+	//
+	// *
+	// http-tokens - The state of token usage for your instance metadata requests
+	// (optional | required).
+	//
+	// * iam-instance-profile - The ARN of the IAM instance
+	// profile.
 	//
 	// * image-id - The ID of the AMI.
 	//
-	// * instance-type - The
-	// instance type.
+	// * instance-type - The instance
+	// type.
 	//
-	// * is-default-version - A boolean that indicates whether the
-	// launch template version is the default version.
+	// * is-default-version - A boolean that indicates whether the launch
+	// template version is the default version.
 	//
 	// * kernel-id - The kernel ID.
 	//
 	// *
-	// ram-disk-id - The RAM disk ID.
+	// license-configuration-arn - The ARN of the license configuration.
+	//
+	// *
+	// network-card-index - The index of the network card.
+	//
+	// * ram-disk-id - The RAM
+	// disk ID.
 	Filters []types.Filter
 
 	// The ID of the launch template. To describe one or more versions of a specified
-	// launch template, you must specify either the launch template ID or the launch
-	// template name in the request. To describe all the latest or default launch
+	// launch template, you must specify either the LaunchTemplateId or the
+	// LaunchTemplateName, but not both. To describe all the latest or default launch
 	// template versions in your account, you must omit this parameter.
 	LaunchTemplateId *string
 
 	// The name of the launch template. To describe one or more versions of a specified
-	// launch template, you must specify either the launch template ID or the launch
-	// template name in the request. To describe all the latest or default launch
+	// launch template, you must specify either the LaunchTemplateName or the
+	// LaunchTemplateId, but not both. To describe all the latest or default launch
 	// template versions in your account, you must omit this parameter.
 	LaunchTemplateName *string
 
@@ -97,7 +117,7 @@ type DescribeLaunchTemplateVersionsInput struct {
 	// all launch templates in your account that are defined as the latest version, the
 	// valid value is $Latest. To describe all launch templates in your account that
 	// are defined as the default version, the valid value is $Default. You can specify
-	// $Latest and $Default in the same call. You cannot specify numbers.
+	// $Latest and $Default in the same request. You cannot specify numbers.
 	Versions []string
 
 	noSmithyDocumentSerde
@@ -230,12 +250,13 @@ func NewDescribeLaunchTemplateVersionsPaginator(client DescribeLaunchTemplateVer
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeLaunchTemplateVersionsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeLaunchTemplateVersions page.
@@ -262,7 +283,10 @@ func (p *DescribeLaunchTemplateVersionsPaginator) NextPage(ctx context.Context, 
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 
