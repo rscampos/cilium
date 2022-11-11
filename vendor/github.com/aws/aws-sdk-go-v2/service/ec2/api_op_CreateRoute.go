@@ -10,12 +10,11 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Creates a route in a route table within a VPC. You must specify one of the
-// following targets: internet gateway or virtual private gateway, NAT instance,
-// NAT gateway, VPC peering connection, network interface, egress-only internet
-// gateway, or transit gateway. When determining how to route traffic, we use the
-// route with the most specific match. For example, traffic is destined for the
-// IPv4 address 192.0.2.3, and the route table includes the following two IPv4
+// Creates a route in a route table within a VPC. You must specify either a
+// destination CIDR block or a prefix list ID. You must also specify exactly one of
+// the resources from the parameter list. When determining how to route traffic, we
+// use the route with the most specific match. For example, traffic is destined for
+// the IPv4 address 192.0.2.3, and the route table includes the following two IPv4
 // routes:
 //
 // * 192.0.2.0/24 (goes to some target A)
@@ -54,6 +53,9 @@ type CreateRouteInput struct {
 	// The ID of the carrier gateway. You can only use this option when the VPC
 	// contains a subnet which is associated with a Wavelength Zone.
 	CarrierGatewayId *string
+
+	// The Amazon Resource Name (ARN) of the core network.
+	CoreNetworkArn *string
 
 	// The IPv4 CIDR address block used for the destination match. Routing decisions
 	// are based on the most specific match. We modify the specified CIDR block to its
