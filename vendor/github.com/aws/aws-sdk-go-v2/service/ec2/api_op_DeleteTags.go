@@ -12,8 +12,8 @@ import (
 )
 
 // Deletes the specified set of tags from the specified set of resources. To list
-// the current tags, use DescribeTags. For more information about tags, see Tagging
-// Your Resources
+// the current tags, use DescribeTags. For more information about tags, see Tag
+// your Amazon EC2 resources
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html) in the
 // Amazon Elastic Compute Cloud User Guide.
 func (c *Client) DeleteTags(ctx context.Context, params *DeleteTagsInput, optFns ...func(*Options)) (*DeleteTagsOutput, error) {
@@ -51,7 +51,7 @@ type DeleteTagsInput struct {
 	// string as the tag value, we delete the tag only if its value is an empty string.
 	// If you omit this parameter, we delete all user-defined tags for the specified
 	// resources. We do not delete Amazon Web Services-generated tags (tags that have
-	// the aws: prefix).
+	// the aws: prefix). Constraints: Up to 1000 tags.
 	Tags []types.Tag
 
 	noSmithyDocumentSerde
