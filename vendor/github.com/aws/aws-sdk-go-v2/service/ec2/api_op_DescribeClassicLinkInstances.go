@@ -15,7 +15,10 @@ import (
 // Describes one or more of your linked EC2-Classic instances. This request only
 // returns information about EC2-Classic instances linked to a VPC through
 // ClassicLink. You cannot use this request to return information about other
-// instances.
+// instances. We are retiring EC2-Classic. We recommend that you migrate from
+// EC2-Classic to a VPC. For more information, see Migrate from EC2-Classic to a
+// VPC (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/vpc-migrate.html) in
+// the Amazon Elastic Compute Cloud User Guide.
 func (c *Client) DescribeClassicLinkInstances(ctx context.Context, params *DescribeClassicLinkInstancesInput, optFns ...func(*Options)) (*DescribeClassicLinkInstancesOutput, error) {
 	if params == nil {
 		params = &DescribeClassicLinkInstancesInput{}
@@ -202,12 +205,13 @@ func NewDescribeClassicLinkInstancesPaginator(client DescribeClassicLinkInstance
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeClassicLinkInstancesPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeClassicLinkInstances page.
@@ -234,7 +238,10 @@ func (p *DescribeClassicLinkInstancesPaginator) NextPage(ctx context.Context, op
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 

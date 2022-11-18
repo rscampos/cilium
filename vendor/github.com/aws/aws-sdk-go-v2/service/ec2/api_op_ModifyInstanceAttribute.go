@@ -18,7 +18,7 @@ import (
 // security groups associated with an ENI attached to an instance that has multiple
 // ENIs, we recommend that you use the ModifyNetworkInterfaceAttribute action. To
 // modify some attributes, the instance must be stopped. For more information, see
-// Modifying attributes of a stopped instance
+// Modify a stopped instance
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_ChangingAttributesWhileInstanceStopped.html)
 // in the Amazon EC2 User Guide.
 func (c *Client) ModifyInstanceAttribute(ctx context.Context, params *ModifyInstanceAttributeInput, optFns ...func(*Options)) (*ModifyInstanceAttributeOutput, error) {
@@ -43,7 +43,11 @@ type ModifyInstanceAttributeInput struct {
 	// This member is required.
 	InstanceId *string
 
-	// The name of the attribute.
+	// The name of the attribute to modify. You can modify the following attributes
+	// only: disableApiTermination | instanceType | kernel | ramdisk |
+	// instanceInitiatedShutdownBehavior | blockDeviceMapping | userData |
+	// sourceDestCheck | groupSet | ebsOptimized | sriovNetSupport | enaSupport |
+	// nvmeSupport | disableApiStop | enclaveOptions
 	Attribute types.InstanceAttributeName
 
 	// Modifies the DeleteOnTermination attribute for volumes that are currently
@@ -51,10 +55,15 @@ type ModifyInstanceAttributeInput struct {
 	// DeleteOnTermination, the default is true and the volume is deleted when the
 	// instance is terminated. To add instance store volumes to an Amazon EBS-backed
 	// instance, you must add them when you launch the instance. For more information,
-	// see Updating the block device mapping when launching an instance
+	// see Update the block device mapping when launching an instance
 	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concepts.html#Using_OverridingAMIBDM)
 	// in the Amazon EC2 User Guide.
 	BlockDeviceMappings []types.InstanceBlockDeviceMappingSpecification
+
+	// Indicates whether an instance is enabled for stop protection. For more
+	// information, see Stop Protection
+	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Stop_Start.html#Using_StopProtection).
+	DisableApiStop *types.AttributeBooleanValue
 
 	// If the value is true, you can't terminate the instance using the Amazon EC2
 	// console, CLI, or API; otherwise, you can. You cannot use this parameter for Spot

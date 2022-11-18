@@ -51,6 +51,14 @@ type CreatePlacementGroupInput struct {
 	// The number of partitions. Valid only when Strategy is set to partition.
 	PartitionCount *int32
 
+	// Determines how placement groups spread instances.
+	//
+	// * Host – You can use host
+	// only with Outpost placement groups.
+	//
+	// * Rack – No usage restrictions.
+	SpreadLevel types.SpreadLevel
+
 	// The placement strategy.
 	Strategy types.PlacementStrategy
 
@@ -62,7 +70,7 @@ type CreatePlacementGroupInput struct {
 
 type CreatePlacementGroupOutput struct {
 
-	// Describes a placement group.
+	// Information about the placement group.
 	PlacementGroup *types.PlacementGroup
 
 	// Metadata pertaining to the operation's result.
