@@ -93,91 +93,94 @@ type DescribeImagesInput struct {
 	// block-device-mapping.encrypted - A Boolean that indicates whether the Amazon EBS
 	// volume is encrypted.
 	//
-	// * description - The description of the image (provided
-	// during image creation).
+	// * creation-date - The time when the image was created, in
+	// the ISO 8601 format in the UTC time zone (YYYY-MM-DDThh:mm:ss.sssZ), for
+	// example, 2021-09-29T11:04:43.305Z. You can use a wildcard (*), for example,
+	// 2021-09-29T*, which matches an entire day.
 	//
-	// * ena-support - A Boolean that indicates whether
-	// enhanced networking with ENA is enabled.
+	// * description - The description of
+	// the image (provided during image creation).
 	//
-	// * hypervisor - The hypervisor type
-	// (ovm | xen).
+	// * ena-support - A Boolean that
+	// indicates whether enhanced networking with ENA is enabled.
+	//
+	// * hypervisor - The
+	// hypervisor type (ovm | xen).
 	//
 	// * image-id - The ID of the image.
 	//
-	// * image-type - The image type
-	// (machine | kernel | ramdisk).
+	// * image-type -
+	// The image type (machine | kernel | ramdisk).
 	//
-	// * is-public - A Boolean that indicates whether
-	// the image is public.
+	// * is-public - A Boolean that
+	// indicates whether the image is public.
 	//
 	// * kernel-id - The kernel ID.
 	//
-	// * manifest-location - The
-	// location of the image manifest.
-	//
-	// * name - The name of the AMI (provided during
-	// image creation).
-	//
-	// * owner-alias - The owner alias (amazon | aws-marketplace).
-	// The valid aliases are defined in an Amazon-maintained list. This is not the
-	// Amazon Web Services account alias that can be set using the IAM console. We
-	// recommend that you use the Owner request parameter instead of this filter.
-	//
 	// *
-	// owner-id - The Amazon Web Services account ID of the owner. We recommend that
-	// you use the Owner request parameter instead of this filter.
+	// manifest-location - The location of the image manifest.
 	//
-	// * platform - The
-	// platform. To only list Windows-based AMIs, use windows.
+	// * name - The name of
+	// the AMI (provided during image creation).
 	//
-	// * product-code - The
-	// product code.
+	// * owner-alias - The owner alias
+	// (amazon | aws-marketplace). The valid aliases are defined in an
+	// Amazon-maintained list. This is not the Amazon Web Services account alias that
+	// can be set using the IAM console. We recommend that you use the Owner request
+	// parameter instead of this filter.
 	//
-	// * product-code.type - The type of the product code
-	// (marketplace).
+	// * owner-id - The Amazon Web Services account
+	// ID of the owner. We recommend that you use the Owner request parameter instead
+	// of this filter.
+	//
+	// * platform - The platform. The only supported value is
+	// windows.
+	//
+	// * product-code - The product code.
+	//
+	// * product-code.type - The type of
+	// the product code (marketplace).
 	//
 	// * ramdisk-id - The RAM disk ID.
 	//
-	// * root-device-name - The device
-	// name of the root device volume (for example, /dev/sda1).
+	// *
+	// root-device-name - The device name of the root device volume (for example,
+	// /dev/sda1).
 	//
-	// * root-device-type -
-	// The type of the root device volume (ebs | instance-store).
+	// * root-device-type - The type of the root device volume (ebs |
+	// instance-store).
 	//
-	// * state - The state
-	// of the image (available | pending | failed).
+	// * state - The state of the image (available | pending |
+	// failed).
 	//
-	// * state-reason-code - The reason
-	// code for the state change.
+	// * state-reason-code - The reason code for the state change.
 	//
-	// * state-reason-message - The message for the state
-	// change.
+	// *
+	// state-reason-message - The message for the state change.
 	//
-	// * sriov-net-support - A value of simple indicates that enhanced
-	// networking with the Intel 82599 VF interface is enabled.
+	// * sriov-net-support -
+	// A value of simple indicates that enhanced networking with the Intel 82599 VF
+	// interface is enabled.
 	//
-	// * tag: - The key/value
-	// combination of a tag assigned to the resource. Use the tag key in the filter
-	// name and the tag value as the filter value. For example, to find all resources
-	// that have a tag with the key Owner and the value TeamA, specify tag:Owner for
-	// the filter name and TeamA for the filter value.
+	// * tag: - The key/value combination of a tag assigned to
+	// the resource. Use the tag key in the filter name and the tag value as the filter
+	// value. For example, to find all resources that have a tag with the key Owner and
+	// the value TeamA, specify tag:Owner for the filter name and TeamA for the filter
+	// value.
 	//
-	// * tag-key - The key of a tag
-	// assigned to the resource. Use this filter to find all resources assigned a tag
-	// with a specific key, regardless of the tag value.
+	// * tag-key - The key of a tag assigned to the resource. Use this filter
+	// to find all resources assigned a tag with a specific key, regardless of the tag
+	// value.
 	//
-	// * virtualization-type - The
-	// virtualization type (paravirtual | hvm).
+	// * virtualization-type - The virtualization type (paravirtual | hvm).
 	Filters []types.Filter
 
 	// The image IDs. Default: Describes all images available to you.
 	ImageIds []string
 
-	// If true, all deprecated AMIs are included in the response. If false, no
-	// deprecated AMIs are included in the response. If no value is specified, the
-	// default value is false. If you are the AMI owner, all deprecated AMIs appear in
-	// the response regardless of the value (true or false) that you set for this
-	// parameter.
+	// Specifies whether to include deprecated AMIs. Default: No deprecated AMIs are
+	// included in the response. If you are the AMI owner, all deprecated AMIs appear
+	// in the response regardless of what you specify for this parameter.
 	IncludeDeprecated *bool
 
 	// Scopes the results to images with the specified owners. You can specify a
@@ -327,8 +330,17 @@ func NewImageAvailableWaiter(client DescribeImagesAPIClient, optFns ...func(*Ima
 // maximum wait duration the waiter will wait. The maxWaitDur is required and must
 // be greater than zero.
 func (w *ImageAvailableWaiter) Wait(ctx context.Context, params *DescribeImagesInput, maxWaitDur time.Duration, optFns ...func(*ImageAvailableWaiterOptions)) error {
+	_, err := w.WaitForOutput(ctx, params, maxWaitDur, optFns...)
+	return err
+}
+
+// WaitForOutput calls the waiter function for ImageAvailable waiter and returns
+// the output of the successful operation. The maxWaitDur is the maximum wait
+// duration the waiter will wait. The maxWaitDur is required and must be greater
+// than zero.
+func (w *ImageAvailableWaiter) WaitForOutput(ctx context.Context, params *DescribeImagesInput, maxWaitDur time.Duration, optFns ...func(*ImageAvailableWaiterOptions)) (*DescribeImagesOutput, error) {
 	if maxWaitDur <= 0 {
-		return fmt.Errorf("maximum wait time for waiter must be greater than zero")
+		return nil, fmt.Errorf("maximum wait time for waiter must be greater than zero")
 	}
 
 	options := w.options
@@ -341,7 +353,7 @@ func (w *ImageAvailableWaiter) Wait(ctx context.Context, params *DescribeImagesI
 	}
 
 	if options.MinDelay > options.MaxDelay {
-		return fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
+		return nil, fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
 	}
 
 	ctx, cancelFn := context.WithTimeout(ctx, maxWaitDur)
@@ -369,10 +381,10 @@ func (w *ImageAvailableWaiter) Wait(ctx context.Context, params *DescribeImagesI
 
 		retryable, err := options.Retryable(ctx, params, out, err)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !retryable {
-			return nil
+			return out, nil
 		}
 
 		remainingTime -= time.Since(start)
@@ -385,16 +397,16 @@ func (w *ImageAvailableWaiter) Wait(ctx context.Context, params *DescribeImagesI
 			attempt, options.MinDelay, options.MaxDelay, remainingTime,
 		)
 		if err != nil {
-			return fmt.Errorf("error computing waiter delay, %w", err)
+			return nil, fmt.Errorf("error computing waiter delay, %w", err)
 		}
 
 		remainingTime -= delay
 		// sleep for the delay amount before invoking a request
 		if err := smithytime.SleepWithContext(ctx, delay); err != nil {
-			return fmt.Errorf("request cancelled while waiting, %w", err)
+			return nil, fmt.Errorf("request cancelled while waiting, %w", err)
 		}
 	}
-	return fmt.Errorf("exceeded max wait time for ImageAvailable waiter")
+	return nil, fmt.Errorf("exceeded max wait time for ImageAvailable waiter")
 }
 
 func imageAvailableStateRetryable(ctx context.Context, input *DescribeImagesInput, output *DescribeImagesOutput, err error) (bool, error) {
@@ -517,8 +529,16 @@ func NewImageExistsWaiter(client DescribeImagesAPIClient, optFns ...func(*ImageE
 // maximum wait duration the waiter will wait. The maxWaitDur is required and must
 // be greater than zero.
 func (w *ImageExistsWaiter) Wait(ctx context.Context, params *DescribeImagesInput, maxWaitDur time.Duration, optFns ...func(*ImageExistsWaiterOptions)) error {
+	_, err := w.WaitForOutput(ctx, params, maxWaitDur, optFns...)
+	return err
+}
+
+// WaitForOutput calls the waiter function for ImageExists waiter and returns the
+// output of the successful operation. The maxWaitDur is the maximum wait duration
+// the waiter will wait. The maxWaitDur is required and must be greater than zero.
+func (w *ImageExistsWaiter) WaitForOutput(ctx context.Context, params *DescribeImagesInput, maxWaitDur time.Duration, optFns ...func(*ImageExistsWaiterOptions)) (*DescribeImagesOutput, error) {
 	if maxWaitDur <= 0 {
-		return fmt.Errorf("maximum wait time for waiter must be greater than zero")
+		return nil, fmt.Errorf("maximum wait time for waiter must be greater than zero")
 	}
 
 	options := w.options
@@ -531,7 +551,7 @@ func (w *ImageExistsWaiter) Wait(ctx context.Context, params *DescribeImagesInpu
 	}
 
 	if options.MinDelay > options.MaxDelay {
-		return fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
+		return nil, fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
 	}
 
 	ctx, cancelFn := context.WithTimeout(ctx, maxWaitDur)
@@ -559,10 +579,10 @@ func (w *ImageExistsWaiter) Wait(ctx context.Context, params *DescribeImagesInpu
 
 		retryable, err := options.Retryable(ctx, params, out, err)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !retryable {
-			return nil
+			return out, nil
 		}
 
 		remainingTime -= time.Since(start)
@@ -575,16 +595,16 @@ func (w *ImageExistsWaiter) Wait(ctx context.Context, params *DescribeImagesInpu
 			attempt, options.MinDelay, options.MaxDelay, remainingTime,
 		)
 		if err != nil {
-			return fmt.Errorf("error computing waiter delay, %w", err)
+			return nil, fmt.Errorf("error computing waiter delay, %w", err)
 		}
 
 		remainingTime -= delay
 		// sleep for the delay amount before invoking a request
 		if err := smithytime.SleepWithContext(ctx, delay); err != nil {
-			return fmt.Errorf("request cancelled while waiting, %w", err)
+			return nil, fmt.Errorf("request cancelled while waiting, %w", err)
 		}
 	}
-	return fmt.Errorf("exceeded max wait time for ImageExists waiter")
+	return nil, fmt.Errorf("exceeded max wait time for ImageExists waiter")
 }
 
 func imageExistsStateRetryable(ctx context.Context, input *DescribeImagesInput, output *DescribeImagesOutput, err error) (bool, error) {

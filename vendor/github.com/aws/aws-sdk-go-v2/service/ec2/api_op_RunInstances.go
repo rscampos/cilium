@@ -68,6 +68,10 @@ import (
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_InstanceStraightToTerminated.html),
 // and Troubleshooting connecting to your instance
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/TroubleshootingInstancesConnecting.html).
+// We are retiring EC2-Classic. We recommend that you migrate from EC2-Classic to a
+// VPC. For more information, see Migrate from EC2-Classic to a VPC
+// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/vpc-migrate.html) in the
+// Amazon EC2 User Guide.
 func (c *Client) RunInstances(ctx context.Context, params *RunInstancesInput, optFns ...func(*Options)) (*RunInstancesOutput, error) {
 	if params == nil {
 		params = &RunInstancesInput{}
@@ -133,8 +137,7 @@ type RunInstancesInput struct {
 	// Constraints: Maximum 64 ASCII characters
 	ClientToken *string
 
-	// The CPU options for the instance. For more information, see Optimizing CPU
-	// options
+	// The CPU options for the instance. For more information, see Optimize CPU options
 	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-optimize-cpu.html)
 	// in the Amazon EC2 User Guide.
 	CpuOptions *types.CpuOptionsRequest
@@ -146,9 +149,14 @@ type RunInstancesInput struct {
 	// For more information, see Burstable performance instances
 	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/burstable-performance-instances.html)
 	// in the Amazon EC2 User Guide. Default: standard (T2 instances) or unlimited
-	// (T3/T3a instances) For T3 instances with host tenancy, only standard is
+	// (T3/T3a/T4g instances) For T3 instances with host tenancy, only standard is
 	// supported.
 	CreditSpecification *types.CreditSpecificationRequest
+
+	// Indicates whether an instance is enabled for stop protection. For more
+	// information, see Stop protection
+	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Stop_Start.html#Using_StopProtection).
+	DisableApiStop *bool
 
 	// If you set this parameter to true, you can't terminate the instance using the
 	// Amazon EC2 console, CLI, or API; otherwise, you can. To change this attribute
@@ -259,6 +267,9 @@ type RunInstancesInput struct {
 	// The license configurations.
 	LicenseSpecifications []types.LicenseConfigurationRequest
 
+	// The maintenance and recovery options for the instance.
+	MaintenanceOptions *types.InstanceMaintenanceOptionsRequest
+
 	// The metadata options for the instance. For more information, see Instance
 	// metadata and user data
 	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html).
@@ -274,6 +285,10 @@ type RunInstancesInput struct {
 
 	// The placement for the instance.
 	Placement *types.Placement
+
+	// The options for the instance hostname. The default values are inherited from the
+	// subnet.
+	PrivateDnsNameOptions *types.PrivateDnsNameOptionsRequest
 
 	// [EC2-VPC] The primary IPv4 address. You must specify a value from the IPv4
 	// address range of the subnet. Only one private IP address can be designated as
@@ -311,21 +326,33 @@ type RunInstancesInput struct {
 	// interface.
 	SubnetId *string
 
-	// The tags to apply to the resources during launch. You can only tag instances and
-	// volumes on launch. The specified tags are applied to all instances or volumes
-	// that are created during launch. To tag a resource after it has been created, see
-	// CreateTags
+	// The tags to apply to the resources that are created during instance launch. You
+	// can specify tags for the following resources only:
+	//
+	// * Instances
+	//
+	// * Volumes
+	//
+	// *
+	// Elastic graphics
+	//
+	// * Spot Instance requests
+	//
+	// * Network interfaces
+	//
+	// To tag a
+	// resource after it has been created, see CreateTags
 	// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateTags.html).
 	TagSpecifications []types.TagSpecification
 
-	// The user data to make available to the instance. For more information, see
-	// Running commands on your Linux instance at launch
-	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html) (Linux) and
-	// Adding User Data
-	// (https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/ec2-instance-metadata.html#instancedata-add-user-data)
-	// (Windows). If you are using a command line tool, base64-encoding is performed
-	// for you, and you can load the text from a file. Otherwise, you must provide
-	// base64-encoded text. User data is limited to 16 KB.
+	// The user data script to make available to the instance. For more information,
+	// see Run commands on your Linux instance at launch
+	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html) and Run
+	// commands on your Windows instance at launch
+	// (https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/ec2-windows-user-data.html).
+	// If you are using a command line tool, base64-encoding is performed for you, and
+	// you can load the text from a file. Otherwise, you must provide base64-encoded
+	// text. User data is limited to 16 KB.
 	UserData *string
 
 	noSmithyDocumentSerde
