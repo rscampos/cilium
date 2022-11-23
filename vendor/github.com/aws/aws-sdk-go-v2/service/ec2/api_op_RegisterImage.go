@@ -13,20 +13,22 @@ import (
 
 // Registers an AMI. When you're creating an AMI, this is the final step you must
 // complete before you can launch an instance from the AMI. For more information
-// about creating AMIs, see Creating your own AMIs
+// about creating AMIs, see Create your own AMI
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami.html) in
 // the Amazon Elastic Compute Cloud User Guide. For Amazon EBS-backed instances,
 // CreateImage creates and registers the AMI in a single request, so you don't have
-// to register the AMI yourself. If needed, you can deregister an AMI at any time.
-// Any modifications you make to an AMI backed by an instance store volume
-// invalidates its registration. If you make changes to an image, deregister the
-// previous image and register the new image. Register a snapshot of a root device
-// volume You can use RegisterImage to create an Amazon EBS-backed Linux AMI from a
-// snapshot of a root device volume. You specify the snapshot using a block device
-// mapping. You can't set the encryption state of the volume using the block device
-// mapping. If the snapshot is encrypted, or encryption by default is enabled, the
-// root volume of an instance launched from the AMI is encrypted. For more
-// information, see Create a Linux AMI from a snapshot
+// to register the AMI yourself. We recommend that you always use CreateImage
+// unless you have a specific reason to use RegisterImage. If needed, you can
+// deregister an AMI at any time. Any modifications you make to an AMI backed by an
+// instance store volume invalidates its registration. If you make changes to an
+// image, deregister the previous image and register the new image. Register a
+// snapshot of a root device volume You can use RegisterImage to create an Amazon
+// EBS-backed Linux AMI from a snapshot of a root device volume. You specify the
+// snapshot using a block device mapping. You can't set the encryption state of the
+// volume using the block device mapping. If the snapshot is encrypted, or
+// encryption by default is enabled, the root volume of an instance launched from
+// the AMI is encrypted. For more information, see Create a Linux AMI from a
+// snapshot
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html#creating-launching-ami-from-snapshot)
 // and Use encryption with Amazon EBS-backed AMIs
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIEncryption.html) in the
@@ -53,7 +55,7 @@ import (
 // billing product code. If you purchase a Reserved Instance without the matching
 // billing product code, the Reserved Instance will not be applied to the On-Demand
 // Instance. For information about how to obtain the platform details and billing
-// information of an AMI, see Understanding AMI billing
+// information of an AMI, see Understand AMI billing information
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-billing-info.html) in
 // the Amazon Elastic Compute Cloud User Guide.
 func (c *Client) RegisterImage(ctx context.Context, params *RegisterImageInput, optFns ...func(*Options)) (*RegisterImageOutput, error) {
@@ -127,6 +129,16 @@ type RegisterImageInput struct {
 	// in the Amazon S3 Service Developer Guide.
 	ImageLocation *string
 
+	// Set to v2.0 to indicate that IMDSv2 is specified in the AMI. Instances launched
+	// from this AMI will have HttpTokens automatically set to required so that, by
+	// default, the instance requires that IMDSv2 is used when requesting instance
+	// metadata. In addition, HttpPutResponseHopLimit is set to 2. For more
+	// information, see Configure the AMI
+	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-IMDS-new-instances.html#configure-IMDS-new-instances-ami-configuration)
+	// in the Amazon Elastic Compute Cloud User Guide. If you set the value to v2.0,
+	// make sure that your AMI software can support IMDSv2.
+	ImdsSupport types.ImdsSupportValues
+
 	// The ID of the kernel.
 	KernelId *string
 
@@ -142,6 +154,22 @@ type RegisterImageInput struct {
 	// supported only for HVM AMIs. Specifying this option with a PV AMI can make
 	// instances launched from the AMI unreachable.
 	SriovNetSupport *string
+
+	// Set to v2.0 to enable Trusted Platform Module (TPM) support. For more
+	// information, see NitroTPM
+	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/nitrotpm.html) in the
+	// Amazon Elastic Compute Cloud User Guide.
+	TpmSupport types.TpmSupportValues
+
+	// Base64 representation of the non-volatile UEFI variable store. To retrieve the
+	// UEFI data, use the GetInstanceUefiData
+	// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_GetInstanceUefiData)
+	// command. You can inspect and modify the UEFI data by using the python-uefivars
+	// tool (https://github.com/awslabs/python-uefivars) on GitHub. For more
+	// information, see UEFI Secure Boot
+	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/uefi-secure-boot.html) in
+	// the Amazon Elastic Compute Cloud User Guide.
+	UefiData *string
 
 	// The type of virtualization (hvm | paravirtual). Default: paravirtual
 	VirtualizationType *string
