@@ -36,19 +36,17 @@ type DescribeNetworkInsightsPathsInput struct {
 	// UnauthorizedOperation.
 	DryRun *bool
 
-	// The filters. The following are possible values:
+	// The filters. The following are the possible values:
 	//
-	// * Destination - The ID of the
-	// resource.
+	// * destination - The ID of
+	// the resource.
 	//
-	// * DestinationPort - The destination port.
+	// * destination-port - The destination port.
 	//
-	// * Name - The path name.
+	// * protocol - The
+	// protocol.
 	//
-	// *
-	// Protocol - The protocol.
-	//
-	// * Source - The ID of the resource.
+	// * source - The ID of the resource.
 	Filters []types.Filter
 
 	// The maximum number of results to return with a single call. To retrieve the
@@ -190,12 +188,13 @@ func NewDescribeNetworkInsightsPathsPaginator(client DescribeNetworkInsightsPath
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeNetworkInsightsPathsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeNetworkInsightsPaths page.
@@ -222,7 +221,10 @@ func (p *DescribeNetworkInsightsPathsPaginator) NextPage(ctx context.Context, op
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 
