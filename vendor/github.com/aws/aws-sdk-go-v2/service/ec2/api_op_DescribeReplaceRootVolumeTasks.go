@@ -14,8 +14,8 @@ import (
 
 // Describes a root volume replacement task. For more information, see Replace a
 // root volume
-// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-restoring-volume.html#replace-root)
-// in the Amazon Elastic Compute Cloud User Guide.
+// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/replace-root.html) in the
+// Amazon Elastic Compute Cloud User Guide.
 func (c *Client) DescribeReplaceRootVolumeTasks(ctx context.Context, params *DescribeReplaceRootVolumeTasksInput, optFns ...func(*Options)) (*DescribeReplaceRootVolumeTasksOutput, error) {
 	if params == nil {
 		params = &DescribeReplaceRootVolumeTasksInput{}
@@ -184,12 +184,13 @@ func NewDescribeReplaceRootVolumeTasksPaginator(client DescribeReplaceRootVolume
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeReplaceRootVolumeTasksPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeReplaceRootVolumeTasks page.
@@ -216,7 +217,10 @@ func (p *DescribeReplaceRootVolumeTasksPaginator) NextPage(ctx context.Context, 
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 
