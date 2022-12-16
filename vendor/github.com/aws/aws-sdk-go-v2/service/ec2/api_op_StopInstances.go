@@ -11,8 +11,11 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Stops an Amazon EBS-backed instance. You can use the Stop action to hibernate an
-// instance if the instance is enabled for hibernation
+// Stops an Amazon EBS-backed instance. For more information, see Stop and start
+// your instance
+// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Stop_Start.html) in the
+// Amazon EC2 User Guide. You can use the Stop action to hibernate an instance if
+// the instance is enabled for hibernation
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Hibernate.html#enabling-hibernation)
 // and it meets the hibernation prerequisites
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Hibernate.html#hibernating-prerequisites).
@@ -44,7 +47,7 @@ import (
 // in the Amazon EC2 User Guide. When you stop an instance, we attempt to shut it
 // down forcibly after a short while. If your instance appears stuck in the
 // stopping state after a period of time, there may be an issue with the underlying
-// host computer. For more information, see Troubleshooting stopping your instance
+// host computer. For more information, see Troubleshoot stopping your instance
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/TroubleshootingInstancesStopping.html)
 // in the Amazon EC2 User Guide.
 func (c *Client) StopInstances(ctx context.Context, params *StopInstancesInput, optFns ...func(*Options)) (*StopInstancesOutput, error) {
