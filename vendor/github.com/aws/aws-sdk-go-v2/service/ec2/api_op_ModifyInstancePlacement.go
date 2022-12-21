@@ -60,6 +60,10 @@ type ModifyInstancePlacementInput struct {
 	// The affinity setting for the instance.
 	Affinity types.Affinity
 
+	// The Group Id of a placement group. You must specify the Placement Group Group Id
+	// to launch an instance in a shared placement group.
+	GroupId *string
+
 	// The name of the placement group in which to place the instance. For spread
 	// placement groups, the instance must have a tenancy of default. For cluster and
 	// partition placement groups, the instance must have a tenancy of default or
@@ -73,7 +77,8 @@ type ModifyInstancePlacementInput struct {
 	// The ARN of the host resource group in which to place the instance.
 	HostResourceGroupArn *string
 
-	// Reserved for future use.
+	// The number of the partition in which to place the instance. Valid only if the
+	// placement group strategy is set to partition.
 	PartitionNumber *int32
 
 	// The tenancy for the instance. For T3 instances, you can't change the tenancy
