@@ -14,7 +14,7 @@ import (
 // Enables deprecation of the specified AMI at the specified date and time. For
 // more information, see Deprecate an AMI
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-deprecate.html) in the
-// Amazon Elastic Compute Cloud User Guide.
+// Amazon EC2 User Guide.
 func (c *Client) EnableImageDeprecation(ctx context.Context, params *EnableImageDeprecationInput, optFns ...func(*Options)) (*EnableImageDeprecationOutput, error) {
 	if params == nil {
 		params = &EnableImageDeprecationInput{}
@@ -35,7 +35,8 @@ type EnableImageDeprecationInput struct {
 	// The date and time to deprecate the AMI, in UTC, in the following format:
 	// YYYY-MM-DDTHH:MM:SSZ. If you specify a value for seconds, Amazon EC2 rounds the
 	// seconds to the nearest minute. You can’t specify a date in the past. The upper
-	// limit for DeprecateAt is 10 years from now.
+	// limit for DeprecateAt is 10 years from now, except for public AMIs, where the
+	// upper limit is 2 years from the creation date.
 	//
 	// This member is required.
 	DeprecateAt *time.Time
