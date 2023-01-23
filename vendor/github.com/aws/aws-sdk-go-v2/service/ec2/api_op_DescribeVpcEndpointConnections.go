@@ -37,19 +37,21 @@ type DescribeVpcEndpointConnectionsInput struct {
 	// UnauthorizedOperation.
 	DryRun *bool
 
-	// One or more filters.
+	// The filters.
 	//
-	// * service-id - The ID of the service.
-	//
-	// *
-	// vpc-endpoint-owner - The ID of the Amazon Web Services account ID that owns the
-	// endpoint.
-	//
-	// * vpc-endpoint-state - The state of the endpoint (pendingAcceptance |
-	// pending | available | deleting | deleted | rejected | failed).
+	// * ip-address-type - The IP address type (ipv4 | ipv6).
 	//
 	// *
-	// vpc-endpoint-id - The ID of the endpoint.
+	// service-id - The ID of the service.
+	//
+	// * vpc-endpoint-owner - The ID of the Amazon
+	// Web Services account ID that owns the endpoint.
+	//
+	// * vpc-endpoint-state - The
+	// state of the endpoint (pendingAcceptance | pending | available | deleting |
+	// deleted | rejected | failed).
+	//
+	// * vpc-endpoint-id - The ID of the endpoint.
 	Filters []types.Filter
 
 	// The maximum number of results to return for the request in a single page. The
@@ -70,7 +72,7 @@ type DescribeVpcEndpointConnectionsOutput struct {
 	// there are no more results to return.
 	NextToken *string
 
-	// Information about one or more VPC endpoint connections.
+	// Information about the VPC endpoint connections.
 	VpcEndpointConnections []types.VpcEndpointConnection
 
 	// Metadata pertaining to the operation's result.
@@ -192,12 +194,13 @@ func NewDescribeVpcEndpointConnectionsPaginator(client DescribeVpcEndpointConnec
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeVpcEndpointConnectionsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeVpcEndpointConnections page.
@@ -224,7 +227,10 @@ func (p *DescribeVpcEndpointConnectionsPaginator) NextPage(ctx context.Context, 
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 
