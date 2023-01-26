@@ -13,7 +13,7 @@ import (
 )
 
 // Describes the specified tags for your EC2 resources. For more information about
-// tags, see Tagging Your Resources
+// tags, see Tag your Amazon EC2 resources
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html) in the
 // Amazon Elastic Compute Cloud User Guide.
 func (c *Client) DescribeTags(ctx context.Context, params *DescribeTagsInput, optFns ...func(*Options)) (*DescribeTagsOutput, error) {
@@ -195,12 +195,13 @@ func NewDescribeTagsPaginator(client DescribeTagsAPIClient, params *DescribeTags
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeTagsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeTags page.
@@ -227,7 +228,10 @@ func (p *DescribeTagsPaginator) NextPage(ctx context.Context, optFns ...func(*Op
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 
