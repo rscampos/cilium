@@ -55,7 +55,7 @@ type DescribeNetworkInterfacePermissionsInput struct {
 	// parameter is not specified, up to 50 results are returned by default.
 	MaxResults *int32
 
-	// One or more network interface permission IDs.
+	// The network interface permission IDs.
 	NetworkInterfacePermissionIds []string
 
 	// The token to request the next page of results.
@@ -191,12 +191,13 @@ func NewDescribeNetworkInterfacePermissionsPaginator(client DescribeNetworkInter
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeNetworkInterfacePermissionsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeNetworkInterfacePermissions page.
@@ -223,7 +224,10 @@ func (p *DescribeNetworkInterfacePermissionsPaginator) NextPage(ctx context.Cont
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 
