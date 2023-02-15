@@ -117,11 +117,14 @@ type DescribeRouteTablesInput struct {
 	// * vpc-id - The ID of the VPC for the route table.
 	Filters []types.Filter
 
-	// The maximum number of results to return with a single call. To retrieve the
-	// remaining results, make another call with the returned nextToken value.
+	// The maximum number of items to return for this request. To get the next page of
+	// items, make another request with the token returned in the output. For more
+	// information, see Pagination
+	// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Query-Requests.html#api-pagination).
 	MaxResults *int32
 
-	// The token for the next page of results.
+	// The token returned from a previous paginated request. Pagination continues from
+	// the end of the items returned by the previous request.
 	NextToken *string
 
 	// One or more route table IDs. Default: Describes all your route tables.
@@ -133,8 +136,8 @@ type DescribeRouteTablesInput struct {
 // Contains the output of DescribeRouteTables.
 type DescribeRouteTablesOutput struct {
 
-	// The token to use to retrieve the next page of results. This value is null when
-	// there are no more results to return.
+	// The token to include in another request to get the next page of items. This
+	// value is null when there are no more items to return.
 	NextToken *string
 
 	// Information about one or more route tables.
@@ -217,8 +220,10 @@ var _ DescribeRouteTablesAPIClient = (*Client)(nil)
 // DescribeRouteTablesPaginatorOptions is the paginator options for
 // DescribeRouteTables
 type DescribeRouteTablesPaginatorOptions struct {
-	// The maximum number of results to return with a single call. To retrieve the
-	// remaining results, make another call with the returned nextToken value.
+	// The maximum number of items to return for this request. To get the next page of
+	// items, make another request with the token returned in the output. For more
+	// information, see Pagination
+	// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Query-Requests.html#api-pagination).
 	Limit int32
 
 	// Set to true if pagination should stop if the service returns a pagination token
@@ -255,12 +260,13 @@ func NewDescribeRouteTablesPaginator(client DescribeRouteTablesAPIClient, params
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeRouteTablesPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeRouteTables page.
@@ -287,7 +293,10 @@ func (p *DescribeRouteTablesPaginator) NextPage(ctx context.Context, optFns ...f
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 

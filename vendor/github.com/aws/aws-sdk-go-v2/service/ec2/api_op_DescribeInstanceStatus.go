@@ -27,7 +27,7 @@ import (
 // instances to identify hardware and software issues. For more information, see
 // Status checks for your instances
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-system-instance-status-check.html)
-// and Troubleshooting instances with failed status checks
+// and Troubleshoot instances with failed status checks
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/TroubleshootingInstances.html)
 // in the Amazon EC2 User Guide.
 //
@@ -125,13 +125,15 @@ type DescribeInstanceStatusInput struct {
 	// 100 explicitly specified instance IDs.
 	InstanceIds []string
 
-	// The maximum number of results to return in a single call. To retrieve the
-	// remaining results, make another call with the returned NextToken value. This
+	// The maximum number of items to return for this request. To retrieve the next
+	// page of items, make another request with the token returned in the output. This
 	// value can be between 5 and 1000. You cannot specify this parameter and the
-	// instance IDs parameter in the same call.
+	// instance IDs parameter in the same call. For more information, see Pagination
+	// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Query-Requests.html#api-pagination).
 	MaxResults *int32
 
-	// The token to retrieve the next page of results.
+	// The token returned from a previous paginated request. Pagination continues from
+	// the end of the items returned by the previous request.
 	NextToken *string
 
 	noSmithyDocumentSerde
@@ -142,8 +144,8 @@ type DescribeInstanceStatusOutput struct {
 	// Information about the status of the instances.
 	InstanceStatuses []types.InstanceStatus
 
-	// The token to use to retrieve the next page of results. This value is null when
-	// there are no more results to return.
+	// The token to include in another request to get the next page of items. This
+	// value is null when there are no more items to return.
 	NextToken *string
 
 	// Metadata pertaining to the operation's result.
@@ -223,10 +225,11 @@ var _ DescribeInstanceStatusAPIClient = (*Client)(nil)
 // DescribeInstanceStatusPaginatorOptions is the paginator options for
 // DescribeInstanceStatus
 type DescribeInstanceStatusPaginatorOptions struct {
-	// The maximum number of results to return in a single call. To retrieve the
-	// remaining results, make another call with the returned NextToken value. This
+	// The maximum number of items to return for this request. To retrieve the next
+	// page of items, make another request with the token returned in the output. This
 	// value can be between 5 and 1000. You cannot specify this parameter and the
-	// instance IDs parameter in the same call.
+	// instance IDs parameter in the same call. For more information, see Pagination
+	// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Query-Requests.html#api-pagination).
 	Limit int32
 
 	// Set to true if pagination should stop if the service returns a pagination token
@@ -263,12 +266,13 @@ func NewDescribeInstanceStatusPaginator(client DescribeInstanceStatusAPIClient, 
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeInstanceStatusPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeInstanceStatus page.
@@ -295,7 +299,10 @@ func (p *DescribeInstanceStatusPaginator) NextPage(ctx context.Context, optFns .
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 
@@ -361,8 +368,17 @@ func NewInstanceStatusOkWaiter(client DescribeInstanceStatusAPIClient, optFns ..
 // the maximum wait duration the waiter will wait. The maxWaitDur is required and
 // must be greater than zero.
 func (w *InstanceStatusOkWaiter) Wait(ctx context.Context, params *DescribeInstanceStatusInput, maxWaitDur time.Duration, optFns ...func(*InstanceStatusOkWaiterOptions)) error {
+	_, err := w.WaitForOutput(ctx, params, maxWaitDur, optFns...)
+	return err
+}
+
+// WaitForOutput calls the waiter function for InstanceStatusOk waiter and returns
+// the output of the successful operation. The maxWaitDur is the maximum wait
+// duration the waiter will wait. The maxWaitDur is required and must be greater
+// than zero.
+func (w *InstanceStatusOkWaiter) WaitForOutput(ctx context.Context, params *DescribeInstanceStatusInput, maxWaitDur time.Duration, optFns ...func(*InstanceStatusOkWaiterOptions)) (*DescribeInstanceStatusOutput, error) {
 	if maxWaitDur <= 0 {
-		return fmt.Errorf("maximum wait time for waiter must be greater than zero")
+		return nil, fmt.Errorf("maximum wait time for waiter must be greater than zero")
 	}
 
 	options := w.options
@@ -375,7 +391,7 @@ func (w *InstanceStatusOkWaiter) Wait(ctx context.Context, params *DescribeInsta
 	}
 
 	if options.MinDelay > options.MaxDelay {
-		return fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
+		return nil, fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
 	}
 
 	ctx, cancelFn := context.WithTimeout(ctx, maxWaitDur)
@@ -403,10 +419,10 @@ func (w *InstanceStatusOkWaiter) Wait(ctx context.Context, params *DescribeInsta
 
 		retryable, err := options.Retryable(ctx, params, out, err)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !retryable {
-			return nil
+			return out, nil
 		}
 
 		remainingTime -= time.Since(start)
@@ -419,16 +435,16 @@ func (w *InstanceStatusOkWaiter) Wait(ctx context.Context, params *DescribeInsta
 			attempt, options.MinDelay, options.MaxDelay, remainingTime,
 		)
 		if err != nil {
-			return fmt.Errorf("error computing waiter delay, %w", err)
+			return nil, fmt.Errorf("error computing waiter delay, %w", err)
 		}
 
 		remainingTime -= delay
 		// sleep for the delay amount before invoking a request
 		if err := smithytime.SleepWithContext(ctx, delay); err != nil {
-			return fmt.Errorf("request cancelled while waiting, %w", err)
+			return nil, fmt.Errorf("request cancelled while waiting, %w", err)
 		}
 	}
-	return fmt.Errorf("exceeded max wait time for InstanceStatusOk waiter")
+	return nil, fmt.Errorf("exceeded max wait time for InstanceStatusOk waiter")
 }
 
 func instanceStatusOkStateRetryable(ctx context.Context, input *DescribeInstanceStatusInput, output *DescribeInstanceStatusOutput, err error) (bool, error) {
@@ -539,8 +555,17 @@ func NewSystemStatusOkWaiter(client DescribeInstanceStatusAPIClient, optFns ...f
 // maximum wait duration the waiter will wait. The maxWaitDur is required and must
 // be greater than zero.
 func (w *SystemStatusOkWaiter) Wait(ctx context.Context, params *DescribeInstanceStatusInput, maxWaitDur time.Duration, optFns ...func(*SystemStatusOkWaiterOptions)) error {
+	_, err := w.WaitForOutput(ctx, params, maxWaitDur, optFns...)
+	return err
+}
+
+// WaitForOutput calls the waiter function for SystemStatusOk waiter and returns
+// the output of the successful operation. The maxWaitDur is the maximum wait
+// duration the waiter will wait. The maxWaitDur is required and must be greater
+// than zero.
+func (w *SystemStatusOkWaiter) WaitForOutput(ctx context.Context, params *DescribeInstanceStatusInput, maxWaitDur time.Duration, optFns ...func(*SystemStatusOkWaiterOptions)) (*DescribeInstanceStatusOutput, error) {
 	if maxWaitDur <= 0 {
-		return fmt.Errorf("maximum wait time for waiter must be greater than zero")
+		return nil, fmt.Errorf("maximum wait time for waiter must be greater than zero")
 	}
 
 	options := w.options
@@ -553,7 +578,7 @@ func (w *SystemStatusOkWaiter) Wait(ctx context.Context, params *DescribeInstanc
 	}
 
 	if options.MinDelay > options.MaxDelay {
-		return fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
+		return nil, fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
 	}
 
 	ctx, cancelFn := context.WithTimeout(ctx, maxWaitDur)
@@ -581,10 +606,10 @@ func (w *SystemStatusOkWaiter) Wait(ctx context.Context, params *DescribeInstanc
 
 		retryable, err := options.Retryable(ctx, params, out, err)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !retryable {
-			return nil
+			return out, nil
 		}
 
 		remainingTime -= time.Since(start)
@@ -597,16 +622,16 @@ func (w *SystemStatusOkWaiter) Wait(ctx context.Context, params *DescribeInstanc
 			attempt, options.MinDelay, options.MaxDelay, remainingTime,
 		)
 		if err != nil {
-			return fmt.Errorf("error computing waiter delay, %w", err)
+			return nil, fmt.Errorf("error computing waiter delay, %w", err)
 		}
 
 		remainingTime -= delay
 		// sleep for the delay amount before invoking a request
 		if err := smithytime.SleepWithContext(ctx, delay); err != nil {
-			return fmt.Errorf("request cancelled while waiting, %w", err)
+			return nil, fmt.Errorf("request cancelled while waiting, %w", err)
 		}
 	}
-	return fmt.Errorf("exceeded max wait time for SystemStatusOk waiter")
+	return nil, fmt.Errorf("exceeded max wait time for SystemStatusOk waiter")
 }
 
 func systemStatusOkStateRetryable(ctx context.Context, input *DescribeInstanceStatusInput, output *DescribeInstanceStatusOutput, err error) (bool, error) {

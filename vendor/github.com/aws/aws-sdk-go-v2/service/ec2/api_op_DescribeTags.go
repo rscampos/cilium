@@ -13,7 +13,7 @@ import (
 )
 
 // Describes the specified tags for your EC2 resources. For more information about
-// tags, see Tagging Your Resources
+// tags, see Tag your Amazon EC2 resources
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html) in the
 // Amazon Elastic Compute Cloud User Guide.
 func (c *Client) DescribeTags(ctx context.Context, params *DescribeTagsInput, optFns ...func(*Options)) (*DescribeTagsOutput, error) {
@@ -61,12 +61,14 @@ type DescribeTagsInput struct {
 	// * value - The tag value.
 	Filters []types.Filter
 
-	// The maximum number of results to return in a single call. This value can be
-	// between 5 and 1000. To retrieve the remaining results, make another call with
-	// the returned NextToken value.
+	// The maximum number of items to return for this request. This value can be
+	// between 5 and 1000. To get the next page of items, make another request with the
+	// token returned in the output. For more information, see Pagination
+	// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Query-Requests.html#api-pagination).
 	MaxResults *int32
 
-	// The token to retrieve the next page of results.
+	// The token returned from a previous paginated request. Pagination continues from
+	// the end of the items returned by the previous request.
 	NextToken *string
 
 	noSmithyDocumentSerde
@@ -74,8 +76,8 @@ type DescribeTagsInput struct {
 
 type DescribeTagsOutput struct {
 
-	// The token to use to retrieve the next page of results. This value is null when
-	// there are no more results to return.
+	// The token to include in another request to get the next page of items. This
+	// value is null when there are no more items to return.
 	NextToken *string
 
 	// The tags.
@@ -156,9 +158,10 @@ var _ DescribeTagsAPIClient = (*Client)(nil)
 
 // DescribeTagsPaginatorOptions is the paginator options for DescribeTags
 type DescribeTagsPaginatorOptions struct {
-	// The maximum number of results to return in a single call. This value can be
-	// between 5 and 1000. To retrieve the remaining results, make another call with
-	// the returned NextToken value.
+	// The maximum number of items to return for this request. This value can be
+	// between 5 and 1000. To get the next page of items, make another request with the
+	// token returned in the output. For more information, see Pagination
+	// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Query-Requests.html#api-pagination).
 	Limit int32
 
 	// Set to true if pagination should stop if the service returns a pagination token
@@ -195,12 +198,13 @@ func NewDescribeTagsPaginator(client DescribeTagsAPIClient, params *DescribeTags
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeTagsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeTags page.
@@ -227,7 +231,10 @@ func (p *DescribeTagsPaginator) NextPage(ctx context.Context, optFns ...func(*Op
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 

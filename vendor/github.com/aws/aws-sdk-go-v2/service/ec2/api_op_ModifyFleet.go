@@ -67,6 +67,7 @@ type ModifyFleetInput struct {
 
 	// Indicates whether running instances should be terminated if the total target
 	// capacity of the EC2 Fleet is decreased below the current size of the EC2 Fleet.
+	// Supported only for fleets of type maintain.
 	ExcessCapacityTerminationPolicy types.FleetExcessCapacityTerminationPolicy
 
 	// The launch template and overrides.
@@ -80,7 +81,8 @@ type ModifyFleetInput struct {
 
 type ModifyFleetOutput struct {
 
-	// Is true if the request succeeds, and an error otherwise.
+	// If the request succeeds, the response returns true. If the request fails, no
+	// response is returned, and instead an error message is returned.
 	Return *bool
 
 	// Metadata pertaining to the operation's result.
