@@ -42,12 +42,12 @@ type DescribeVpcEndpointServicePermissionsInput struct {
 	// UnauthorizedOperation.
 	DryRun *bool
 
-	// One or more filters.
+	// The filters.
 	//
 	// * principal - The ARN of the principal.
 	//
-	// * principal-type
-	// - The principal type (All | Service | OrganizationUnit | Account | User | Role).
+	// * principal-type - The
+	// principal type (All | Service | OrganizationUnit | Account | User | Role).
 	Filters []types.Filter
 
 	// The maximum number of results to return for the request in a single page. The
@@ -64,7 +64,7 @@ type DescribeVpcEndpointServicePermissionsInput struct {
 
 type DescribeVpcEndpointServicePermissionsOutput struct {
 
-	// Information about one or more allowed principals.
+	// Information about the allowed principals.
 	AllowedPrincipals []types.AllowedPrincipal
 
 	// The token to use to retrieve the next page of results. This value is null when
@@ -193,12 +193,13 @@ func NewDescribeVpcEndpointServicePermissionsPaginator(client DescribeVpcEndpoin
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeVpcEndpointServicePermissionsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeVpcEndpointServicePermissions page.
@@ -225,7 +226,10 @@ func (p *DescribeVpcEndpointServicePermissionsPaginator) NextPage(ctx context.Co
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 
