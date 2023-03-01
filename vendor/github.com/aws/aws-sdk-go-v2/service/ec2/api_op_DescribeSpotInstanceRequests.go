@@ -26,11 +26,11 @@ import (
 // (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeInstances)
 // with a filter to look for instances where the instance lifecycle is spot. We
 // recommend that you set MaxResults to a value between 5 and 1000 to limit the
-// number of results returned. This paginates the output, which makes the list more
-// manageable and returns the results faster. If the list of results exceeds your
-// MaxResults value, then that number of results is returned along with a NextToken
+// number of items returned. This paginates the output, which makes the list more
+// manageable and returns the items faster. If the list of items exceeds your
+// MaxResults value, then that number of items is returned along with a NextToken
 // value that can be passed to a subsequent DescribeSpotInstanceRequests request to
-// retrieve the remaining results. Spot Instance requests are deleted four hours
+// retrieve the remaining items. Spot Instance requests are deleted four hours
 // after they are canceled and their instances are terminated.
 func (c *Client) DescribeSpotInstanceRequests(ctx context.Context, params *DescribeSpotInstanceRequestsInput, optFns ...func(*Options)) (*DescribeSpotInstanceRequestsOutput, error) {
 	if params == nil {
@@ -159,11 +159,11 @@ type DescribeSpotInstanceRequestsInput struct {
 	// request (open | active | closed | cancelled | failed). Spot request status
 	// information can help you track your Amazon EC2 Spot Instance requests. For more
 	// information, see Spot request status
-	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-bid-status.html) in
-	// the Amazon EC2 User Guide for Linux Instances.
+	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-request-status.html)
+	// in the Amazon EC2 User Guide for Linux Instances.
 	//
-	// * status-code - The short code
-	// describing the most recent evaluation of your Spot Instance request.
+	// * status-code - The short
+	// code describing the most recent evaluation of your Spot Instance request.
 	//
 	// *
 	// status-message - The message explaining the status of the Spot Instance
@@ -187,13 +187,14 @@ type DescribeSpotInstanceRequestsInput struct {
 	// * valid-until - The end date of the request.
 	Filters []types.Filter
 
-	// The maximum number of results to return in a single call. Specify a value
-	// between 5 and 1000. To retrieve the remaining results, make another call with
-	// the returned NextToken value.
+	// The maximum number of items to return for this request. To get the next page of
+	// items, make another request with the token returned in the output. For more
+	// information, see Pagination
+	// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Query-Requests.html#api-pagination).
 	MaxResults *int32
 
-	// The token to request the next set of results. This value is null when there are
-	// no more results to return.
+	// The token returned from a previous paginated request. Pagination continues from
+	// the end of the items returned by the previous request.
 	NextToken *string
 
 	// One or more Spot Instance request IDs.
@@ -205,8 +206,8 @@ type DescribeSpotInstanceRequestsInput struct {
 // Contains the output of DescribeSpotInstanceRequests.
 type DescribeSpotInstanceRequestsOutput struct {
 
-	// The token to use to retrieve the next set of results. This value is null when
-	// there are no more results to return.
+	// The token to include in another request to get the next page of items. This
+	// value is null when there are no more items to return.
 	NextToken *string
 
 	// One or more Spot Instance requests.
@@ -289,9 +290,10 @@ var _ DescribeSpotInstanceRequestsAPIClient = (*Client)(nil)
 // DescribeSpotInstanceRequestsPaginatorOptions is the paginator options for
 // DescribeSpotInstanceRequests
 type DescribeSpotInstanceRequestsPaginatorOptions struct {
-	// The maximum number of results to return in a single call. Specify a value
-	// between 5 and 1000. To retrieve the remaining results, make another call with
-	// the returned NextToken value.
+	// The maximum number of items to return for this request. To get the next page of
+	// items, make another request with the token returned in the output. For more
+	// information, see Pagination
+	// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Query-Requests.html#api-pagination).
 	Limit int32
 
 	// Set to true if pagination should stop if the service returns a pagination token
@@ -330,12 +332,13 @@ func NewDescribeSpotInstanceRequestsPaginator(client DescribeSpotInstanceRequest
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeSpotInstanceRequestsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeSpotInstanceRequests page.
@@ -362,7 +365,10 @@ func (p *DescribeSpotInstanceRequestsPaginator) NextPage(ctx context.Context, op
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 
@@ -432,8 +438,17 @@ func NewSpotInstanceRequestFulfilledWaiter(client DescribeSpotInstanceRequestsAP
 // maxWaitDur is the maximum wait duration the waiter will wait. The maxWaitDur is
 // required and must be greater than zero.
 func (w *SpotInstanceRequestFulfilledWaiter) Wait(ctx context.Context, params *DescribeSpotInstanceRequestsInput, maxWaitDur time.Duration, optFns ...func(*SpotInstanceRequestFulfilledWaiterOptions)) error {
+	_, err := w.WaitForOutput(ctx, params, maxWaitDur, optFns...)
+	return err
+}
+
+// WaitForOutput calls the waiter function for SpotInstanceRequestFulfilled waiter
+// and returns the output of the successful operation. The maxWaitDur is the
+// maximum wait duration the waiter will wait. The maxWaitDur is required and must
+// be greater than zero.
+func (w *SpotInstanceRequestFulfilledWaiter) WaitForOutput(ctx context.Context, params *DescribeSpotInstanceRequestsInput, maxWaitDur time.Duration, optFns ...func(*SpotInstanceRequestFulfilledWaiterOptions)) (*DescribeSpotInstanceRequestsOutput, error) {
 	if maxWaitDur <= 0 {
-		return fmt.Errorf("maximum wait time for waiter must be greater than zero")
+		return nil, fmt.Errorf("maximum wait time for waiter must be greater than zero")
 	}
 
 	options := w.options
@@ -446,7 +461,7 @@ func (w *SpotInstanceRequestFulfilledWaiter) Wait(ctx context.Context, params *D
 	}
 
 	if options.MinDelay > options.MaxDelay {
-		return fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
+		return nil, fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
 	}
 
 	ctx, cancelFn := context.WithTimeout(ctx, maxWaitDur)
@@ -474,10 +489,10 @@ func (w *SpotInstanceRequestFulfilledWaiter) Wait(ctx context.Context, params *D
 
 		retryable, err := options.Retryable(ctx, params, out, err)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !retryable {
-			return nil
+			return out, nil
 		}
 
 		remainingTime -= time.Since(start)
@@ -490,16 +505,16 @@ func (w *SpotInstanceRequestFulfilledWaiter) Wait(ctx context.Context, params *D
 			attempt, options.MinDelay, options.MaxDelay, remainingTime,
 		)
 		if err != nil {
-			return fmt.Errorf("error computing waiter delay, %w", err)
+			return nil, fmt.Errorf("error computing waiter delay, %w", err)
 		}
 
 		remainingTime -= delay
 		// sleep for the delay amount before invoking a request
 		if err := smithytime.SleepWithContext(ctx, delay); err != nil {
-			return fmt.Errorf("request cancelled while waiting, %w", err)
+			return nil, fmt.Errorf("request cancelled while waiting, %w", err)
 		}
 	}
-	return fmt.Errorf("exceeded max wait time for SpotInstanceRequestFulfilled waiter")
+	return nil, fmt.Errorf("exceeded max wait time for SpotInstanceRequestFulfilled waiter")
 }
 
 func spotInstanceRequestFulfilledStateRetryable(ctx context.Context, input *DescribeSpotInstanceRequestsInput, output *DescribeSpotInstanceRequestsOutput, err error) (bool, error) {
