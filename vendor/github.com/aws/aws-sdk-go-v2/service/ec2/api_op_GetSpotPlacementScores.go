@@ -60,12 +60,14 @@ type GetSpotPlacementScoresInput struct {
 	// can't specify InstanceRequirementsWithMetadata.
 	InstanceTypes []string
 
-	// The maximum number of results to return in a single call. Specify a value
-	// between 1 and  1000. The default value is 1000. To retrieve the remaining
-	// results, make another call with  the returned NextToken value.
+	// The maximum number of items to return for this request. To get the next page of
+	// items, make another request with the token returned in the output. For more
+	// information, see Pagination
+	// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Query-Requests.html#api-pagination).
 	MaxResults *int32
 
-	// The token for the next set of results.
+	// The token returned from a previous paginated request. Pagination continues from
+	// the end of the items returned by the previous request.
 	NextToken *string
 
 	// The Regions used to narrow down the list of Regions to be scored. Enter the
@@ -87,7 +89,8 @@ type GetSpotPlacementScoresInput struct {
 
 type GetSpotPlacementScoresOutput struct {
 
-	// The token for the next set of results.
+	// The token to include in another request to get the next page of items. This
+	// value is null when there are no more items to return.
 	NextToken *string
 
 	// The Spot placement score for the top 10 Regions or Availability Zones, scored on
@@ -185,9 +188,10 @@ var _ GetSpotPlacementScoresAPIClient = (*Client)(nil)
 // GetSpotPlacementScoresPaginatorOptions is the paginator options for
 // GetSpotPlacementScores
 type GetSpotPlacementScoresPaginatorOptions struct {
-	// The maximum number of results to return in a single call. Specify a value
-	// between 1 and  1000. The default value is 1000. To retrieve the remaining
-	// results, make another call with  the returned NextToken value.
+	// The maximum number of items to return for this request. To get the next page of
+	// items, make another request with the token returned in the output. For more
+	// information, see Pagination
+	// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Query-Requests.html#api-pagination).
 	Limit int32
 
 	// Set to true if pagination should stop if the service returns a pagination token
@@ -224,12 +228,13 @@ func NewGetSpotPlacementScoresPaginator(client GetSpotPlacementScoresAPIClient, 
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *GetSpotPlacementScoresPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next GetSpotPlacementScores page.
@@ -256,7 +261,10 @@ func (p *GetSpotPlacementScoresPaginator) NextPage(ctx context.Context, optFns .
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 

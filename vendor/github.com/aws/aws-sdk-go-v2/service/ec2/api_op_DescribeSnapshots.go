@@ -50,13 +50,12 @@ import (
 // specify Amazon Web Services account IDs (if you own the snapshots), self for
 // snapshots for which you own or have explicit permissions, or all for public
 // snapshots. If you are describing a long list of snapshots, we recommend that you
-// paginate the output to make the list more manageable. The MaxResults parameter
-// sets the maximum number of results returned in a single page. If the list of
-// results exceeds your MaxResults value, then that number of results is returned
-// along with a NextToken value that can be passed to a subsequent
-// DescribeSnapshots request to retrieve the remaining results. To get the state of
-// fast snapshot restores for a snapshot, use DescribeFastSnapshotRestores. For
-// more information about EBS snapshots, see Amazon EBS snapshots
+// paginate the output to make the list more manageable. For more information, see
+// Pagination
+// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Query-Requests.html#api-pagination).
+// To get the state of fast snapshot restores for a snapshot, use
+// DescribeFastSnapshotRestores. For more information about EBS snapshots, see
+// Amazon EBS snapshots
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSSnapshots.html) in the
 // Amazon Elastic Compute Cloud User Guide.
 func (c *Client) DescribeSnapshots(ctx context.Context, params *DescribeSnapshotsInput, optFns ...func(*Options)) (*DescribeSnapshotsOutput, error) {
@@ -109,38 +108,35 @@ type DescribeSnapshotsInput struct {
 	// * status -
 	// The status of the snapshot (pending | completed | error).
 	//
-	// * tag: - The
-	// key/value combination of a tag assigned to the resource. Use the tag key in the
-	// filter name and the tag value as the filter value. For example, to find all
-	// resources that have a tag with the key Owner and the value TeamA, specify
-	// tag:Owner for the filter name and TeamA for the filter value.
+	// * storage-tier - The
+	// storage tier of the snapshot (archive | standard).
 	//
-	// * tag-key - The
-	// key of a tag assigned to the resource. Use this filter to find all resources
-	// assigned a tag with a specific key, regardless of the tag value.
+	// * tag: - The key/value
+	// combination of a tag assigned to the resource. Use the tag key in the filter
+	// name and the tag value as the filter value. For example, to find all resources
+	// that have a tag with the key Owner and the value TeamA, specify tag:Owner for
+	// the filter name and TeamA for the filter value.
 	//
-	// * volume-id -
-	// The ID of the volume the snapshot is for.
+	// * tag-key - The key of a tag
+	// assigned to the resource. Use this filter to find all resources assigned a tag
+	// with a specific key, regardless of the tag value.
 	//
-	// * volume-size - The size of the
-	// volume, in GiB.
+	// * volume-id - The ID of the
+	// volume the snapshot is for.
+	//
+	// * volume-size - The size of the volume, in GiB.
 	Filters []types.Filter
 
-	// The maximum number of snapshot results returned by DescribeSnapshots in
-	// paginated output. When this parameter is used, DescribeSnapshots only returns
-	// MaxResults results in a single page along with a NextToken response element. The
-	// remaining results of the initial request can be seen by sending another
-	// DescribeSnapshots request with the returned NextToken value. This value can be
-	// between 5 and 1,000; if MaxResults is given a value larger than 1,000, only
-	// 1,000 results are returned. If this parameter is not used, then
-	// DescribeSnapshots returns all results. You cannot specify this parameter and the
-	// snapshot IDs parameter in the same request.
+	// The maximum number of snapshots to return for this request. This value can be
+	// between 5 and 1,000; if this value is larger than 1,000, only 1,000 results are
+	// returned. If this parameter is not used, then the request returns all snapshots.
+	// You cannot specify this parameter and the snapshot IDs parameter in the same
+	// request. For more information, see Pagination
+	// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Query-Requests.html#api-pagination).
 	MaxResults *int32
 
-	// The NextToken value returned from a previous paginated DescribeSnapshots request
-	// where MaxResults was used and the results exceeded the value of that parameter.
-	// Pagination continues from the end of the previous results that returned the
-	// NextToken value. This value is null when there are no more results to return.
+	// The token returned from a previous paginated request. Pagination continues from
+	// the end of the items returned by the previous request.
 	NextToken *string
 
 	// Scopes the results to snapshots with the specified owners. You can specify a
@@ -160,10 +156,8 @@ type DescribeSnapshotsInput struct {
 
 type DescribeSnapshotsOutput struct {
 
-	// The NextToken value to include in a future DescribeSnapshots request. When the
-	// results of a DescribeSnapshots request exceed MaxResults, this value can be used
-	// to retrieve the next page of results. This value is null when there are no more
-	// results to return.
+	// The token to include in another request to return the next page of snapshots.
+	// This value is null when there are no more snapshots to return.
 	NextToken *string
 
 	// Information about the snapshots.
@@ -245,15 +239,12 @@ var _ DescribeSnapshotsAPIClient = (*Client)(nil)
 
 // DescribeSnapshotsPaginatorOptions is the paginator options for DescribeSnapshots
 type DescribeSnapshotsPaginatorOptions struct {
-	// The maximum number of snapshot results returned by DescribeSnapshots in
-	// paginated output. When this parameter is used, DescribeSnapshots only returns
-	// MaxResults results in a single page along with a NextToken response element. The
-	// remaining results of the initial request can be seen by sending another
-	// DescribeSnapshots request with the returned NextToken value. This value can be
-	// between 5 and 1,000; if MaxResults is given a value larger than 1,000, only
-	// 1,000 results are returned. If this parameter is not used, then
-	// DescribeSnapshots returns all results. You cannot specify this parameter and the
-	// snapshot IDs parameter in the same request.
+	// The maximum number of snapshots to return for this request. This value can be
+	// between 5 and 1,000; if this value is larger than 1,000, only 1,000 results are
+	// returned. If this parameter is not used, then the request returns all snapshots.
+	// You cannot specify this parameter and the snapshot IDs parameter in the same
+	// request. For more information, see Pagination
+	// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Query-Requests.html#api-pagination).
 	Limit int32
 
 	// Set to true if pagination should stop if the service returns a pagination token
@@ -290,12 +281,13 @@ func NewDescribeSnapshotsPaginator(client DescribeSnapshotsAPIClient, params *De
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeSnapshotsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeSnapshots page.
@@ -322,7 +314,10 @@ func (p *DescribeSnapshotsPaginator) NextPage(ctx context.Context, optFns ...fun
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 
@@ -388,8 +383,17 @@ func NewSnapshotCompletedWaiter(client DescribeSnapshotsAPIClient, optFns ...fun
 // the maximum wait duration the waiter will wait. The maxWaitDur is required and
 // must be greater than zero.
 func (w *SnapshotCompletedWaiter) Wait(ctx context.Context, params *DescribeSnapshotsInput, maxWaitDur time.Duration, optFns ...func(*SnapshotCompletedWaiterOptions)) error {
+	_, err := w.WaitForOutput(ctx, params, maxWaitDur, optFns...)
+	return err
+}
+
+// WaitForOutput calls the waiter function for SnapshotCompleted waiter and returns
+// the output of the successful operation. The maxWaitDur is the maximum wait
+// duration the waiter will wait. The maxWaitDur is required and must be greater
+// than zero.
+func (w *SnapshotCompletedWaiter) WaitForOutput(ctx context.Context, params *DescribeSnapshotsInput, maxWaitDur time.Duration, optFns ...func(*SnapshotCompletedWaiterOptions)) (*DescribeSnapshotsOutput, error) {
 	if maxWaitDur <= 0 {
-		return fmt.Errorf("maximum wait time for waiter must be greater than zero")
+		return nil, fmt.Errorf("maximum wait time for waiter must be greater than zero")
 	}
 
 	options := w.options
@@ -402,7 +406,7 @@ func (w *SnapshotCompletedWaiter) Wait(ctx context.Context, params *DescribeSnap
 	}
 
 	if options.MinDelay > options.MaxDelay {
-		return fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
+		return nil, fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
 	}
 
 	ctx, cancelFn := context.WithTimeout(ctx, maxWaitDur)
@@ -430,10 +434,10 @@ func (w *SnapshotCompletedWaiter) Wait(ctx context.Context, params *DescribeSnap
 
 		retryable, err := options.Retryable(ctx, params, out, err)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !retryable {
-			return nil
+			return out, nil
 		}
 
 		remainingTime -= time.Since(start)
@@ -446,16 +450,16 @@ func (w *SnapshotCompletedWaiter) Wait(ctx context.Context, params *DescribeSnap
 			attempt, options.MinDelay, options.MaxDelay, remainingTime,
 		)
 		if err != nil {
-			return fmt.Errorf("error computing waiter delay, %w", err)
+			return nil, fmt.Errorf("error computing waiter delay, %w", err)
 		}
 
 		remainingTime -= delay
 		// sleep for the delay amount before invoking a request
 		if err := smithytime.SleepWithContext(ctx, delay); err != nil {
-			return fmt.Errorf("request cancelled while waiting, %w", err)
+			return nil, fmt.Errorf("request cancelled while waiting, %w", err)
 		}
 	}
-	return fmt.Errorf("exceeded max wait time for SnapshotCompleted waiter")
+	return nil, fmt.Errorf("exceeded max wait time for SnapshotCompleted waiter")
 }
 
 func snapshotCompletedStateRetryable(ctx context.Context, input *DescribeSnapshotsInput, output *DescribeSnapshotsOutput, err error) (bool, error) {
