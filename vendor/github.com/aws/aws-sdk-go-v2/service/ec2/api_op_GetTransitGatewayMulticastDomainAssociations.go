@@ -31,6 +31,11 @@ func (c *Client) GetTransitGatewayMulticastDomainAssociations(ctx context.Contex
 
 type GetTransitGatewayMulticastDomainAssociationsInput struct {
 
+	// The ID of the transit gateway multicast domain.
+	//
+	// This member is required.
+	TransitGatewayMulticastDomainId *string
+
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
 	// required permissions, the error response is DryRunOperation. Otherwise, it is
@@ -61,9 +66,6 @@ type GetTransitGatewayMulticastDomainAssociationsInput struct {
 
 	// The token for the next page of results.
 	NextToken *string
-
-	// The ID of the transit gateway multicast domain.
-	TransitGatewayMulticastDomainId *string
 
 	noSmithyDocumentSerde
 }
@@ -126,6 +128,9 @@ func (c *Client) addOperationGetTransitGatewayMulticastDomainAssociationsMiddlew
 		return err
 	}
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addOpGetTransitGatewayMulticastDomainAssociationsValidationMiddleware(stack); err != nil {
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opGetTransitGatewayMulticastDomainAssociations(options.Region), middleware.Before); err != nil {
@@ -194,12 +199,13 @@ func NewGetTransitGatewayMulticastDomainAssociationsPaginator(client GetTransitG
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *GetTransitGatewayMulticastDomainAssociationsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next GetTransitGatewayMulticastDomainAssociations page.
@@ -226,7 +232,10 @@ func (p *GetTransitGatewayMulticastDomainAssociationsPaginator) NextPage(ctx con
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 

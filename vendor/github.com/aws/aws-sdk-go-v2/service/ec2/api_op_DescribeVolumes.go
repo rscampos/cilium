@@ -20,13 +20,11 @@ import (
 
 // Describes the specified EBS volumes or all of your EBS volumes. If you are
 // describing a long list of volumes, we recommend that you paginate the output to
-// make the list more manageable. The MaxResults parameter sets the maximum number
-// of results returned in a single page. If the list of results exceeds your
-// MaxResults value, then that number of results is returned along with a NextToken
-// value that can be passed to a subsequent DescribeVolumes request to retrieve the
-// remaining results. For more information about EBS volumes, see Amazon EBS
-// volumes (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumes.html) in
-// the Amazon Elastic Compute Cloud User Guide.
+// make the list more manageable. For more information, see Pagination
+// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Query-Requests.html#api-pagination).
+// For more information about EBS volumes, see Amazon EBS volumes
+// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumes.html) in the
+// Amazon Elastic Compute Cloud User Guide.
 func (c *Client) DescribeVolumes(ctx context.Context, params *DescribeVolumesInput, optFns ...func(*Options)) (*DescribeVolumesOutput, error) {
 	if params == nil {
 		params = &DescribeVolumesInput{}
@@ -108,20 +106,16 @@ type DescribeVolumesInput struct {
 	// io2 | st1 | sc1| standard)
 	Filters []types.Filter
 
-	// The maximum number of volume results returned by DescribeVolumes in paginated
-	// output. When this parameter is used, DescribeVolumes only returns MaxResults
-	// results in a single page along with a NextToken response element. The remaining
-	// results of the initial request can be seen by sending another DescribeVolumes
-	// request with the returned NextToken value. This value can be between 5 and 500;
-	// if MaxResults is given a value larger than 500, only 500 results are returned.
-	// If this parameter is not used, then DescribeVolumes returns all results. You
-	// cannot specify this parameter and the volume IDs parameter in the same request.
+	// The maximum number of volumes to return for this request. This value can be
+	// between 5 and 500; if you specify a value larger than 500, only 500 items are
+	// returned. If this parameter is not used, then all items are returned. You cannot
+	// specify this parameter and the volume IDs parameter in the same request. For
+	// more information, see Pagination
+	// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Query-Requests.html#api-pagination).
 	MaxResults *int32
 
-	// The NextToken value returned from a previous paginated DescribeVolumes request
-	// where MaxResults was used and the results exceeded the value of that parameter.
-	// Pagination continues from the end of the previous results that returned the
-	// NextToken value. This value is null when there are no more results to return.
+	// The token returned from a previous paginated request. Pagination continues from
+	// the end of the items returned from the previous request.
 	NextToken *string
 
 	// The volume IDs.
@@ -132,10 +126,8 @@ type DescribeVolumesInput struct {
 
 type DescribeVolumesOutput struct {
 
-	// The NextToken value to include in a future DescribeVolumes request. When the
-	// results of a DescribeVolumes request exceed MaxResults, this value can be used
-	// to retrieve the next page of results. This value is null when there are no more
-	// results to return.
+	// The token to include in another request to get the next page of items. This
+	// value is null when there are no more items to return.
 	NextToken *string
 
 	// Information about the volumes.
@@ -217,14 +209,12 @@ var _ DescribeVolumesAPIClient = (*Client)(nil)
 
 // DescribeVolumesPaginatorOptions is the paginator options for DescribeVolumes
 type DescribeVolumesPaginatorOptions struct {
-	// The maximum number of volume results returned by DescribeVolumes in paginated
-	// output. When this parameter is used, DescribeVolumes only returns MaxResults
-	// results in a single page along with a NextToken response element. The remaining
-	// results of the initial request can be seen by sending another DescribeVolumes
-	// request with the returned NextToken value. This value can be between 5 and 500;
-	// if MaxResults is given a value larger than 500, only 500 results are returned.
-	// If this parameter is not used, then DescribeVolumes returns all results. You
-	// cannot specify this parameter and the volume IDs parameter in the same request.
+	// The maximum number of volumes to return for this request. This value can be
+	// between 5 and 500; if you specify a value larger than 500, only 500 items are
+	// returned. If this parameter is not used, then all items are returned. You cannot
+	// specify this parameter and the volume IDs parameter in the same request. For
+	// more information, see Pagination
+	// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Query-Requests.html#api-pagination).
 	Limit int32
 
 	// Set to true if pagination should stop if the service returns a pagination token
@@ -261,12 +251,13 @@ func NewDescribeVolumesPaginator(client DescribeVolumesAPIClient, params *Descri
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeVolumesPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeVolumes page.
@@ -293,7 +284,10 @@ func (p *DescribeVolumesPaginator) NextPage(ctx context.Context, optFns ...func(
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 
@@ -359,8 +353,17 @@ func NewVolumeAvailableWaiter(client DescribeVolumesAPIClient, optFns ...func(*V
 // maximum wait duration the waiter will wait. The maxWaitDur is required and must
 // be greater than zero.
 func (w *VolumeAvailableWaiter) Wait(ctx context.Context, params *DescribeVolumesInput, maxWaitDur time.Duration, optFns ...func(*VolumeAvailableWaiterOptions)) error {
+	_, err := w.WaitForOutput(ctx, params, maxWaitDur, optFns...)
+	return err
+}
+
+// WaitForOutput calls the waiter function for VolumeAvailable waiter and returns
+// the output of the successful operation. The maxWaitDur is the maximum wait
+// duration the waiter will wait. The maxWaitDur is required and must be greater
+// than zero.
+func (w *VolumeAvailableWaiter) WaitForOutput(ctx context.Context, params *DescribeVolumesInput, maxWaitDur time.Duration, optFns ...func(*VolumeAvailableWaiterOptions)) (*DescribeVolumesOutput, error) {
 	if maxWaitDur <= 0 {
-		return fmt.Errorf("maximum wait time for waiter must be greater than zero")
+		return nil, fmt.Errorf("maximum wait time for waiter must be greater than zero")
 	}
 
 	options := w.options
@@ -373,7 +376,7 @@ func (w *VolumeAvailableWaiter) Wait(ctx context.Context, params *DescribeVolume
 	}
 
 	if options.MinDelay > options.MaxDelay {
-		return fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
+		return nil, fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
 	}
 
 	ctx, cancelFn := context.WithTimeout(ctx, maxWaitDur)
@@ -401,10 +404,10 @@ func (w *VolumeAvailableWaiter) Wait(ctx context.Context, params *DescribeVolume
 
 		retryable, err := options.Retryable(ctx, params, out, err)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !retryable {
-			return nil
+			return out, nil
 		}
 
 		remainingTime -= time.Since(start)
@@ -417,16 +420,16 @@ func (w *VolumeAvailableWaiter) Wait(ctx context.Context, params *DescribeVolume
 			attempt, options.MinDelay, options.MaxDelay, remainingTime,
 		)
 		if err != nil {
-			return fmt.Errorf("error computing waiter delay, %w", err)
+			return nil, fmt.Errorf("error computing waiter delay, %w", err)
 		}
 
 		remainingTime -= delay
 		// sleep for the delay amount before invoking a request
 		if err := smithytime.SleepWithContext(ctx, delay); err != nil {
-			return fmt.Errorf("request cancelled while waiting, %w", err)
+			return nil, fmt.Errorf("request cancelled while waiting, %w", err)
 		}
 	}
-	return fmt.Errorf("exceeded max wait time for VolumeAvailable waiter")
+	return nil, fmt.Errorf("exceeded max wait time for VolumeAvailable waiter")
 }
 
 func volumeAvailableStateRetryable(ctx context.Context, input *DescribeVolumesInput, output *DescribeVolumesOutput, err error) (bool, error) {
@@ -549,8 +552,16 @@ func NewVolumeDeletedWaiter(client DescribeVolumesAPIClient, optFns ...func(*Vol
 // maximum wait duration the waiter will wait. The maxWaitDur is required and must
 // be greater than zero.
 func (w *VolumeDeletedWaiter) Wait(ctx context.Context, params *DescribeVolumesInput, maxWaitDur time.Duration, optFns ...func(*VolumeDeletedWaiterOptions)) error {
+	_, err := w.WaitForOutput(ctx, params, maxWaitDur, optFns...)
+	return err
+}
+
+// WaitForOutput calls the waiter function for VolumeDeleted waiter and returns the
+// output of the successful operation. The maxWaitDur is the maximum wait duration
+// the waiter will wait. The maxWaitDur is required and must be greater than zero.
+func (w *VolumeDeletedWaiter) WaitForOutput(ctx context.Context, params *DescribeVolumesInput, maxWaitDur time.Duration, optFns ...func(*VolumeDeletedWaiterOptions)) (*DescribeVolumesOutput, error) {
 	if maxWaitDur <= 0 {
-		return fmt.Errorf("maximum wait time for waiter must be greater than zero")
+		return nil, fmt.Errorf("maximum wait time for waiter must be greater than zero")
 	}
 
 	options := w.options
@@ -563,7 +574,7 @@ func (w *VolumeDeletedWaiter) Wait(ctx context.Context, params *DescribeVolumesI
 	}
 
 	if options.MinDelay > options.MaxDelay {
-		return fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
+		return nil, fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
 	}
 
 	ctx, cancelFn := context.WithTimeout(ctx, maxWaitDur)
@@ -591,10 +602,10 @@ func (w *VolumeDeletedWaiter) Wait(ctx context.Context, params *DescribeVolumesI
 
 		retryable, err := options.Retryable(ctx, params, out, err)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !retryable {
-			return nil
+			return out, nil
 		}
 
 		remainingTime -= time.Since(start)
@@ -607,16 +618,16 @@ func (w *VolumeDeletedWaiter) Wait(ctx context.Context, params *DescribeVolumesI
 			attempt, options.MinDelay, options.MaxDelay, remainingTime,
 		)
 		if err != nil {
-			return fmt.Errorf("error computing waiter delay, %w", err)
+			return nil, fmt.Errorf("error computing waiter delay, %w", err)
 		}
 
 		remainingTime -= delay
 		// sleep for the delay amount before invoking a request
 		if err := smithytime.SleepWithContext(ctx, delay); err != nil {
-			return fmt.Errorf("request cancelled while waiting, %w", err)
+			return nil, fmt.Errorf("request cancelled while waiting, %w", err)
 		}
 	}
-	return fmt.Errorf("exceeded max wait time for VolumeDeleted waiter")
+	return nil, fmt.Errorf("exceeded max wait time for VolumeDeleted waiter")
 }
 
 func volumeDeletedStateRetryable(ctx context.Context, input *DescribeVolumesInput, output *DescribeVolumesOutput, err error) (bool, error) {
@@ -727,8 +738,16 @@ func NewVolumeInUseWaiter(client DescribeVolumesAPIClient, optFns ...func(*Volum
 // maximum wait duration the waiter will wait. The maxWaitDur is required and must
 // be greater than zero.
 func (w *VolumeInUseWaiter) Wait(ctx context.Context, params *DescribeVolumesInput, maxWaitDur time.Duration, optFns ...func(*VolumeInUseWaiterOptions)) error {
+	_, err := w.WaitForOutput(ctx, params, maxWaitDur, optFns...)
+	return err
+}
+
+// WaitForOutput calls the waiter function for VolumeInUse waiter and returns the
+// output of the successful operation. The maxWaitDur is the maximum wait duration
+// the waiter will wait. The maxWaitDur is required and must be greater than zero.
+func (w *VolumeInUseWaiter) WaitForOutput(ctx context.Context, params *DescribeVolumesInput, maxWaitDur time.Duration, optFns ...func(*VolumeInUseWaiterOptions)) (*DescribeVolumesOutput, error) {
 	if maxWaitDur <= 0 {
-		return fmt.Errorf("maximum wait time for waiter must be greater than zero")
+		return nil, fmt.Errorf("maximum wait time for waiter must be greater than zero")
 	}
 
 	options := w.options
@@ -741,7 +760,7 @@ func (w *VolumeInUseWaiter) Wait(ctx context.Context, params *DescribeVolumesInp
 	}
 
 	if options.MinDelay > options.MaxDelay {
-		return fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
+		return nil, fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
 	}
 
 	ctx, cancelFn := context.WithTimeout(ctx, maxWaitDur)
@@ -769,10 +788,10 @@ func (w *VolumeInUseWaiter) Wait(ctx context.Context, params *DescribeVolumesInp
 
 		retryable, err := options.Retryable(ctx, params, out, err)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !retryable {
-			return nil
+			return out, nil
 		}
 
 		remainingTime -= time.Since(start)
@@ -785,16 +804,16 @@ func (w *VolumeInUseWaiter) Wait(ctx context.Context, params *DescribeVolumesInp
 			attempt, options.MinDelay, options.MaxDelay, remainingTime,
 		)
 		if err != nil {
-			return fmt.Errorf("error computing waiter delay, %w", err)
+			return nil, fmt.Errorf("error computing waiter delay, %w", err)
 		}
 
 		remainingTime -= delay
 		// sleep for the delay amount before invoking a request
 		if err := smithytime.SleepWithContext(ctx, delay); err != nil {
-			return fmt.Errorf("request cancelled while waiting, %w", err)
+			return nil, fmt.Errorf("request cancelled while waiting, %w", err)
 		}
 	}
-	return fmt.Errorf("exceeded max wait time for VolumeInUse waiter")
+	return nil, fmt.Errorf("exceeded max wait time for VolumeInUse waiter")
 }
 
 func volumeInUseStateRetryable(ctx context.Context, input *DescribeVolumesInput, output *DescribeVolumesOutput, err error) (bool, error) {
